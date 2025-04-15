@@ -81,8 +81,6 @@ namespace reshade
 		bool open_overlay(bool open, api::input_source source) final;
 
 	private:
-		static void check_for_update();
-
 		api::swapchain *const _swapchain;
 		api::device *const _device;
 		api::command_queue *const _graphics_queue;
