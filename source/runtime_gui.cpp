@@ -881,30 +881,13 @@ void reshade::runtime::draw_gui()
 	const bool show_frametime = _show_frametime == 1 || (_show_overlay && _show_frametime > 1);
 	const bool show_preset_name = _show_preset_name == 1 || (_show_overlay && _show_preset_name > 1);
 	bool show_statistics_window = show_clock || show_fps || show_frametime || show_preset_name;
-#if RESHADE_ADDON
-	for (const addon_info &info : addon_loaded_info)
-	{
-		for (const addon_info::overlay_callback &widget : info.overlay_callbacks)
-		{
-			if (widget.title == "OSD")
-			{
-				show_statistics_window = true;
-				break;
-			}
-		}
-	}
-#endif
 
 	_ignore_shortcuts = false;
 	_block_input_next_frame = false;
 	_gather_gpu_statistics = false;
 	_effects_expanded_state &= 2;
 
-	if (!show_splash_window && !show_message_window && !show_statistics_window && !_show_overlay && _preview_texture == 0
-#if RESHADE_ADDON
-		&& !has_addon_event<addon_event::reshade_overlay>()
-#endif
-		)
+	if (!show_splash_window && !show_message_window && !show_statistics_window && !_show_overlay && _preview_texture == 0)
 	{
 		if (_input != nullptr)
 		{
@@ -1102,293 +1085,19 @@ void reshade::runtime::draw_gui()
 
 	ImGui::NewFrame();
 
-#if RESHADE_LOCALIZATION
-	const std::string prev_language = resources::set_current_language(_selected_language);
-	_current_language = resources::get_current_language();
-#endif
-
 	ImVec2 viewport_offset = ImVec2(0, 0);
 	const bool show_spinner = _reload_count > 1 && _tutorial_index != 0;
-
-	// Create ImGui widgets and windows
-	if (show_splash_window && !(show_spinner && show_overlay))
-	{
-		ImGui::SetNextWindowPos(_imgui_context->Style.WindowPadding);
-		ImGui::SetNextWindowSize(ImVec2(imgui_io.DisplaySize.x - 20.0f, 0.0f));
-		ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 1.0f);
-		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.862745f, 0.862745f, 0.862745f, 1.0f));
-		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.117647f, 0.117647f, 0.117647f, show_spinner ? 0.0f : 0.7f));
-		ImGui::Begin("Splash Window", nullptr,
-			ImGuiWindowFlags_NoDecoration |
-			ImGuiWindowFlags_NoNav |
-			ImGuiWindowFlags_NoMove |
-			ImGuiWindowFlags_NoInputs |
-			ImGuiWindowFlags_NoSavedSettings |
-			ImGuiWindowFlags_NoDocking |
-			ImGuiWindowFlags_NoFocusOnAppearing);
-
-		if (show_spinner)
-		{
-			imgui::spinner((_effects.size() - _reload_remaining_effects) / float(_effects.size()), 16.0f * _font_size / 13, 10.0f * _font_size / 13);
-		}
-		else
-		{
-			ImGui::TextUnformatted("ReShade " VERSION_STRING_PRODUCT);
-
-			if ((s_latest_version[0] > VERSION_MAJOR) ||
-				(s_latest_version[0] == VERSION_MAJOR && s_latest_version[1] > VERSION_MINOR) ||
-				(s_latest_version[0] == VERSION_MAJOR && s_latest_version[1] == VERSION_MINOR && s_latest_version[2] > VERSION_REVISION))
-			{
-				ImGui::TextColored(COLOR_YELLOW, _(
-					"An update is available! Please visit %s and install the new version (v%u.%u.%u)."),
-					"https://reshade.me",
-					s_latest_version[0], s_latest_version[1], s_latest_version[2]);
-			}
-			else
-			{
-				ImGui::Text(_("Visit %s for news, updates, effects and discussion."), "https://reshade.me");
-			}
-
-			ImGui::Spacing();
-
-			if (_reload_remaining_effects != 0 && _reload_remaining_effects != std::numeric_limits<size_t>::max())
-			{
-				ImGui::ProgressBar((_effects.size() - _reload_remaining_effects) / float(_effects.size()), ImVec2(ImGui::GetContentRegionAvail().x, 0), "");
-				ImGui::SameLine(15);
-				ImGui::Text(_(
-					"Compiling (%zu effects remaining) ... "
-					"This might take a while. The application could become unresponsive for some time."),
-					_reload_remaining_effects.load());
-			}
-			else
-			{
-				ImGui::ProgressBar(0.0f, ImVec2(ImGui::GetContentRegionAvail().x, 0), "");
-				ImGui::SameLine(15);
-
-				if (_input == nullptr)
-				{
-					ImGui::TextColored(COLOR_YELLOW, _("No keyboard or mouse input available."));
-					if (_input_gamepad != nullptr)
-					{
-						ImGui::SameLine();
-						ImGui::TextColored(COLOR_YELLOW, _("Use gamepad instead: Press 'left + right shoulder + start button' to open the configuration overlay."));
-					}
-				}
-				else if (_tutorial_index == 0)
-				{
-					const std::string label = _("ReShade is now installed successfully! Press '%s' to start the tutorial.");
-					const size_t key_offset = label.find("%s");
-
-					ImGui::TextUnformatted(label.c_str(), label.c_str() + key_offset);
-					ImGui::SameLine(0.0f, 0.0f);
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
-					ImGui::TextUnformatted(input::key_name(_overlay_key_data).c_str());
-					ImGui::PopStyleColor();
-					ImGui::SameLine(0.0f, 0.0f);
-					ImGui::TextUnformatted(label.c_str() + key_offset + 2, label.c_str() + label.size());
-				}
-				else
-				{
-					const std::string label = _("Press '%s' to open the configuration overlay.");
-					const size_t key_offset = label.find("%s");
-
-					ImGui::TextUnformatted(label.c_str(), label.c_str() + key_offset);
-					ImGui::SameLine(0.0f, 0.0f);
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
-					ImGui::TextUnformatted(input::key_name(_overlay_key_data).c_str());
-					ImGui::PopStyleColor();
-					ImGui::SameLine(0.0f, 0.0f);
-					ImGui::TextUnformatted(label.c_str() + key_offset + 2, label.c_str() + label.size());
-				}
-			}
-
-			std::string error_message;
-#if RESHADE_ADDON
-			if (!addon_all_loaded)
-				error_message += _("There were errors loading some add-ons."),
-				error_message += ' ';
-#endif
-			if (!_last_reload_successful)
-				error_message += _("There were errors loading some effects."),
-				error_message += ' ';
-
-			if (!error_message.empty())
-			{
-				error_message += _("Check the log for more details.");
-				ImGui::Spacing();
-				ImGui::TextColored(COLOR_RED, error_message.c_str());
-			}
-		}
-
-		viewport_offset.y += ImGui::GetWindowHeight() + _imgui_context->Style.WindowPadding.x; // Add small space between windows
-
-		ImGui::End();
-		ImGui::PopStyleColor(2);
-		ImGui::PopStyleVar();
-	}
-
-	if (show_message_window)
-	{
-		ImGui::SetNextWindowPos(_imgui_context->Style.WindowPadding + viewport_offset);
-		ImGui::SetNextWindowSize(ImVec2(imgui_io.DisplaySize.x - 20.0f, 0.0f));
-		ImGui::Begin("Message Window", nullptr,
-			ImGuiWindowFlags_NoDecoration |
-			ImGuiWindowFlags_NoNav |
-			ImGuiWindowFlags_NoMove |
-			ImGuiWindowFlags_NoInputs |
-			ImGuiWindowFlags_NoSavedSettings |
-			ImGuiWindowFlags_NoDocking |
-			ImGuiWindowFlags_NoFocusOnAppearing);
-
-		if (!_preset_save_successful)
-		{
-			ImGui::TextColored(COLOR_RED, _("Unable to save configuration and/or current preset. Make sure file permissions are set up to allow writing to these paths and their parent directories:\n%s\n%s"), _config_path.u8string().c_str(), _current_preset_path.u8string().c_str());
-		}
-		else if (show_screenshot_message)
-		{
-			if (!_last_screenshot_save_successful)
-				if (_screenshot_directory_creation_successful)
-					ImGui::TextColored(COLOR_RED, _("Unable to save screenshot because of an internal error (the format may not be supported or the drive may be full)."));
-				else
-					ImGui::TextColored(COLOR_RED, _("Unable to save screenshot because path could not be created: %s"), (g_reshade_base_path / _screenshot_path).u8string().c_str());
-			else
-				ImGui::Text(_("Screenshot successfully saved to %s"), _last_screenshot_file.u8string().c_str());
-		}
-		else if (show_preset_transition_message)
-		{
-			ImGui::Text(_("Switching preset to %s ..."), _current_preset_path.stem().u8string().c_str());
-		}
-
-		viewport_offset.y += ImGui::GetWindowHeight() + _imgui_context->Style.WindowPadding.x; // Add small space between windows
-
-		ImGui::End();
-	}
-
-	if (show_statistics_window && !show_splash_window && !show_message_window)
-	{
-		ImVec2 fps_window_pos(5, 5);
-		ImVec2 fps_window_size(200, 0);
-
-		// Get last calculated window size (because of 'ImGuiWindowFlags_AlwaysAutoResize')
-		if (ImGuiWindow *const fps_window = ImGui::FindWindowByName("OSD"))
-		{
-			fps_window_size  = fps_window->Size;
-			fps_window_size.y = std::max(fps_window_size.y, _imgui_context->Style.FramePadding.y * 4.0f + _imgui_context->Style.ItemSpacing.y +
-				(_imgui_context->Style.ItemSpacing.y + _imgui_context->FontBaseSize * _fps_scale) * ((show_clock ? 1 : 0) + (show_fps ? 1 : 0) + (show_frametime ? 1 : 0) + (show_preset_name ? 1 : 0)));
-		}
-
-		if (_fps_pos % 2)
-			fps_window_pos.x = imgui_io.DisplaySize.x - fps_window_size.x - 5;
-		if (_fps_pos > 1)
-			fps_window_pos.y = imgui_io.DisplaySize.y - fps_window_size.y - 5;
-
-		ImGui::SetNextWindowPos(fps_window_pos);
-		ImGui::PushStyleColor(ImGuiCol_Text, (const ImVec4 &)_fps_col);
-		ImGui::Begin("OSD", nullptr,
-			ImGuiWindowFlags_NoDecoration |
-			ImGuiWindowFlags_NoNav |
-			ImGuiWindowFlags_NoMove |
-			ImGuiWindowFlags_NoInputs |
-			ImGuiWindowFlags_NoSavedSettings |
-			ImGuiWindowFlags_NoDocking |
-			ImGuiWindowFlags_NoFocusOnAppearing |
-			ImGuiWindowFlags_NoBackground |
-			ImGuiWindowFlags_AlwaysAutoResize);
-
-		ImGui::SetWindowFontScale(_fps_scale);
-
-		const float content_width = ImGui::GetContentRegionAvail().x;
-		char temp[512];
-
-		if (show_clock)
-		{
-			const std::time_t t = std::chrono::system_clock::to_time_t(_current_time);
-			struct tm tm; localtime_s(&tm, &t);
-
-			int temp_size;
-			switch (_clock_format)
-			{
-			default:
-			case 0:
-				temp_size = ImFormatString(temp, sizeof(temp), "%02d:%02d", tm.tm_hour, tm.tm_min);
-				break;
-			case 1:
-				temp_size = ImFormatString(temp, sizeof(temp), "%02d:%02d:%02d", tm.tm_hour, tm.tm_min, tm.tm_sec);
-				break;
-			case 2:
-				temp_size = ImFormatString(temp, sizeof(temp), "%.4d-%.2d-%.2d %02d:%02d:%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-				break;
-			}
-			if (_fps_pos % 2) // Align text to the right of the window
-				ImGui::SetCursorPosX(content_width - ImGui::CalcTextSize(temp, temp + temp_size).x + _imgui_context->Style.ItemSpacing.x);
-			ImGui::TextUnformatted(temp, temp + temp_size);
-		}
-		if (show_fps)
-		{
-			const int temp_size = ImFormatString(temp, sizeof(temp), "%.0f fps", imgui_io.Framerate);
-			if (_fps_pos % 2)
-				ImGui::SetCursorPosX(content_width - ImGui::CalcTextSize(temp, temp + temp_size).x + _imgui_context->Style.ItemSpacing.x);
-			ImGui::TextUnformatted(temp, temp + temp_size);
-		}
-		if (show_frametime)
-		{
-			const int temp_size = ImFormatString(temp, sizeof(temp), "%5.2f ms", 1000.0f / imgui_io.Framerate);
-			if (_fps_pos % 2)
-				ImGui::SetCursorPosX(content_width - ImGui::CalcTextSize(temp, temp + temp_size).x + _imgui_context->Style.ItemSpacing.x);
-			ImGui::TextUnformatted(temp, temp + temp_size);
-		}
-		if (show_preset_name)
-		{
-			const std::string preset_name = _current_preset_path.stem().u8string();
-			if (_fps_pos % 2)
-				ImGui::SetCursorPosX(content_width - ImGui::CalcTextSize(preset_name.c_str(), preset_name.c_str() + preset_name.size()).x + _imgui_context->Style.ItemSpacing.x);
-			ImGui::TextUnformatted(preset_name.c_str(), preset_name.c_str() + preset_name.size());
-		}
-
-		ImGui::Dummy(ImVec2(200, 0)); // Force a minimum window width
-
-		ImGui::End();
-		ImGui::PopStyleColor();
-	}
 
 	if (_show_overlay)
 	{
 		const ImGuiViewport *const viewport = ImGui::GetMainViewport();
+		static bool showdemo = false;
+		if (showdemo) ImGui::ShowDemoWindow(&showdemo);
 
-		// Change font size if user presses the control key and moves the mouse wheel
-		if (!_no_font_scaling && imgui_io.KeyCtrl && imgui_io.MouseWheel != 0 && ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow))
-		{
-			_font_size = ImClamp(_font_size + static_cast<int>(imgui_io.MouseWheel), 8, 64);
-			_editor_font_size = ImClamp(_editor_font_size + static_cast<int>(imgui_io.MouseWheel), 8, 64);
-			imgui_io.Fonts->TexReady = false;
-			save_config();
-
-			_is_font_scaling = true;
-		}
-
-		if (_is_font_scaling)
-		{
-			if (!imgui_io.KeyCtrl)
-				_is_font_scaling = false;
-
-			ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, _imgui_context->Style.WindowPadding * 2.0f);
-			ImGui::Begin("FontScaling", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings);
-			ImGui::Text(_("Scaling font size (%d) with 'Ctrl' + mouse wheel"), _font_size);
-			ImGui::End();
-			ImGui::PopStyleVar();
-		}
-
-		const std::pair<std::string, void(runtime::*)()> overlay_callbacks[] = {
-			{ _("Home###home"), &runtime::draw_gui_home },
-#if RESHADE_ADDON
-			{ _("Add-ons###addons"), &runtime::draw_gui_addons },
-#endif
-			{ _("Settings###settings"), &runtime::draw_gui_settings },
-			{ _("Statistics###statistics"), &runtime::draw_gui_statistics },
-			{ _("Log###log"), &runtime::draw_gui_log },
-			{ _("About###about"), &runtime::draw_gui_about }
-		};
+		ImGui::Begin("Demo");
+		ImGui::Text("hello world");
+		if (ImGui::Button("ShowDemo")) showdemo = !showdemo;
+		ImGui::End();
 
 		const ImGuiID root_space_id = ImGui::GetID("ViewportDockspace");
 
@@ -1404,13 +1113,6 @@ void reshade::runtime::draw_gui()
 			ImGuiID main_space_id = 0;
 			ImGuiID right_space_id = 0;
 			ImGui::DockBuilderSplitNode(root_space_id, ImGuiDir_Left, 0.35f, &main_space_id, &right_space_id);
-
-			// Attach most windows to the main dock space
-			for (const std::pair<std::string, void(runtime::*)()> &widget : overlay_callbacks)
-				ImGui::DockBuilderDockWindow(widget.first.c_str(), main_space_id);
-
-			// Attach editor window to the remaining dock space
-			ImGui::DockBuilderDockWindow("###editor", right_space_id);
 
 			// Commit the layout
 			ImGui::DockBuilderFinish(root_space_id);
@@ -1440,112 +1142,7 @@ void reshade::runtime::draw_gui()
 				ImGui::SetNextWindowFocus();
 		}
 
-		for (const std::pair<std::string, void(runtime:: *)()> &widget : overlay_callbacks)
-		{
-			if (ImGui::Begin(widget.first.c_str(), nullptr, ImGuiWindowFlags_NoFocusOnAppearing)) // No focus so that window state is preserved between opening/closing the GUI
-				(this->*widget.second)();
-			ImGui::End();
-		}
-
-		if (!_editors.empty())
-		{
-			if (ImGui::Begin(_("Edit###editor"), nullptr, ImGuiWindowFlags_NoFocusOnAppearing) &&
-				ImGui::BeginTabBar("editor_tabs"))
-			{
-				for (auto it = _editors.begin(); it != _editors.end();)
-				{
-					std::string title = it->entry_point_name.empty() ? it->file_path.filename().u8string() : it->entry_point_name;
-					title += " ###editor" + std::to_string(std::distance(_editors.begin(), it));
-
-					bool is_open = true;
-					ImGuiTabItemFlags flags = ImGuiTabItemFlags_None;
-					if (it->editor.is_modified())
-						flags |= ImGuiTabItemFlags_UnsavedDocument;
-					if (it->selected)
-						flags |= ImGuiTabItemFlags_SetSelected;
-
-					if (ImGui::BeginTabItem(title.c_str(), &is_open, flags))
-					{
-						draw_code_editor(*it);
-						ImGui::EndTabItem();
-					}
-
-					it->selected = false;
-
-					if (!is_open)
-						it = _editors.erase(it);
-					else
-						++it;
-				}
-
-				ImGui::EndTabBar();
-			}
-			ImGui::End();
-		}
 	}
-
-#if RESHADE_ADDON == 1
-	if (addon_enabled)
-#endif
-#if RESHADE_ADDON
-	{
-		for (const addon_info &info : addon_loaded_info)
-		{
-			for (const addon_info::overlay_callback &widget : info.overlay_callbacks)
-			{
-				if (widget.title == "OSD" ? show_splash_window : !_show_overlay)
-					continue;
-
-				if (ImGui::Begin(widget.title.c_str(), nullptr, ImGuiWindowFlags_NoFocusOnAppearing))
-					widget.callback(this);
-				ImGui::End();
-			}
-		}
-
-		invoke_addon_event<addon_event::reshade_overlay>(this);
-	}
-#endif
-
-	if (_preview_texture != 0 && _effects_enabled)
-	{
-		if (!_show_overlay)
-		{
-			// Create a temporary viewport window to attach image to when overlay is not open
-			ImGui::SetNextWindowPos(ImVec2(0, 0));
-			ImGui::SetNextWindowSize(ImVec2(imgui_io.DisplaySize.x, imgui_io.DisplaySize.y));
-			ImGui::Begin("Viewport", nullptr,
-				ImGuiWindowFlags_NoDecoration |
-				ImGuiWindowFlags_NoNav |
-				ImGuiWindowFlags_NoMove |
-				ImGuiWindowFlags_NoDocking |
-				ImGuiWindowFlags_NoFocusOnAppearing |
-				ImGuiWindowFlags_NoBringToFrontOnFocus |
-				ImGuiWindowFlags_NoBackground);
-			ImGui::End();
-		}
-
-		// Scale image to fill the entire viewport by default
-		ImVec2 preview_min = ImVec2(0, 0);
-		ImVec2 preview_max = imgui_io.DisplaySize;
-
-		// Positing image in the middle of the viewport when using original size
-		if (_preview_size[0])
-		{
-			preview_min.x = (preview_max.x * 0.5f) - (_preview_size[0] * 0.5f);
-			preview_max.x = (preview_max.x * 0.5f) + (_preview_size[0] * 0.5f);
-		}
-		if (_preview_size[1])
-		{
-			preview_min.y = (preview_max.y * 0.5f) - (_preview_size[1] * 0.5f);
-			preview_max.y = (preview_max.y * 0.5f) + (_preview_size[1] * 0.5f);
-		}
-
-		ImGui::FindWindowByName("Viewport")->DrawList->AddImage(_preview_texture.handle, preview_min, preview_max, ImVec2(0, 0), ImVec2(1, 1), _preview_size[2]);
-	}
-
-#if RESHADE_LOCALIZATION
-	resources::set_current_language(prev_language);
-#endif
 
 	// Disable keyboard shortcuts while typing into input boxes
 	_ignore_shortcuts |= ImGui::IsAnyItemActive();
