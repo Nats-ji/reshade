@@ -11,11 +11,6 @@
 #include "ini_file.hpp"
 #include <algorithm> // std::find, std::find_if, std::remove, std::remove_if
 
-extern void register_addon_depth();
-extern void register_addon_effect_runtime_sync();
-extern void unregister_addon_depth();
-extern void unregister_addon_effect_runtime_sync();
-
 extern HMODULE g_module_handle;
 
 extern std::filesystem::path get_module_path(HMODULE module);
@@ -151,37 +146,6 @@ void reshade::load_addons()
 
 #if RESHADE_VERBOSE_LOG
 	log::message(log::level::info, "Loading built-in add-ons ...");
-#endif
-
-#if 1
-	{	addon_info &info = addon_loaded_info.emplace_back();
-		info.name = "Generic Depth";
-		info.description = "Automatic depth buffer detection that works in the majority of games.";
-		info.file = g_reshade_dll_path.filename().u8string();
-		info.author = "crosire";
-		info.external = false;
-
-		if (std::find(disabled_addons.cbegin(), disabled_addons.cend(), info.name) == disabled_addons.cend())
-		{
-			info.handle = g_module_handle;
-
-			register_addon_depth();
-		}
-	}
-	{	addon_info &info = addon_loaded_info.emplace_back();
-		info.name = "Effect Runtime Sync";
-		info.description = "Adds preset synchronization between different effect runtime instances, e.g. to have changes in a desktop window reflect in VR.";
-		info.file = g_reshade_dll_path.filename().u8string();
-		info.author = "crosire";
-		info.external = false;
-
-		if (std::find(disabled_addons.cbegin(), disabled_addons.cend(), info.name) == disabled_addons.cend())
-		{
-			info.handle = g_module_handle;
-
-			register_addon_effect_runtime_sync();
-		}
-	}
 #endif
 
 	// Initialize any add-ons that were registered externally
@@ -354,10 +318,6 @@ void reshade::unload_addons()
 	log::message(log::level::info, "Unloading built-in add-ons ...");
 #endif
 
-#if 1
-	unregister_addon_depth();
-	unregister_addon_effect_runtime_sync();
-#endif
 
 	// Remove all unloaded add-ons
 	addon_loaded_info.erase(
