@@ -125,7 +125,7 @@ static bool on_reshade_set_technique_state(effect_runtime *runtime, effect_techn
 		if (synced_technique == 0)
 			continue;
 
-		synced_runtime->set_technique_state(synced_technique, enabled);
+		//synced_runtime->set_technique_state(synced_technique, enabled);
 	}
 
 	return false;
@@ -142,7 +142,7 @@ static void on_reshade_set_current_preset_path(effect_runtime *runtime, const ch
 		if (synced_runtime == runtime)
 			continue;
 
-		synced_runtime->set_current_preset_path(path);
+		//synced_runtime->set_current_preset_path(path);
 	}
 }
 static bool on_reshade_reorder_techniques(effect_runtime *runtime, size_t count, effect_technique *techniques)
@@ -168,7 +168,7 @@ static bool on_reshade_reorder_techniques(effect_runtime *runtime, size_t count,
 			synced_techniques[i] = synced_runtime->find_technique(effect_name, name);
 		}
 
-		synced_runtime->reorder_techniques(synced_techniques.size(), synced_techniques.data());
+		//synced_runtime->reorder_techniques(synced_techniques.size(), synced_techniques.data());
 	}
 
 	return false;
@@ -184,7 +184,7 @@ static void apply_preset_to_all(effect_runtime *runtime)
 		if (synced_runtime == runtime)
 			continue;
 
-		synced_runtime->set_current_preset_path(preset_path);
+		//synced_runtime->set_current_preset_path(preset_path);
 	}
 }
 

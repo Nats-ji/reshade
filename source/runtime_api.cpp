@@ -675,15 +675,6 @@ bool reshade::runtime::get_annotation_string_from_texture_variable(api::effect_t
 	return false;
 }
 
-void reshade::runtime::update_texture(api::effect_texture_variable handle, const uint32_t width, const uint32_t height, const void *pixels)
-{
-	const auto variable = reinterpret_cast<texture *>(handle.handle);
-	if (variable == nullptr || variable->resource == 0)
-		return;
-
-	update_texture(*variable, width, height, 1, pixels);
-}
-
 void reshade::runtime::get_texture_binding(api::effect_texture_variable handle, api::resource_view *out_srv, api::resource_view *out_srv_srgb) const
 {
 	if (const auto variable = reinterpret_cast<const texture *>(handle.handle))
@@ -1007,26 +998,6 @@ bool reshade::runtime::get_technique_state(api::effect_technique handle) const
 
 	return tech->enabled;
 }
-void reshade::runtime::set_technique_state(api::effect_technique handle, bool enabled)
-{
-	const auto tech = reinterpret_cast<technique *>(handle.handle);
-	if (tech == nullptr)
-		return;
-
-#if RESHADE_ADDON
-	const bool was_is_in_api_call = _is_in_api_call;
-	_is_in_api_call = true;
-#endif
-
-	if (enabled)
-		enable_technique(*tech);
-	else
-		disable_technique(*tech);
-
-#if RESHADE_ADDON
-	_is_in_api_call = was_is_in_api_call;
-#endif
-}
 
 constexpr int EFFECT_SCOPE_FLAG = 0b001;
 constexpr int PRESET_SCOPE_FLAG = 0b010;
@@ -1322,82 +1293,6 @@ bool reshade::runtime::get_preprocessor_definition(const std::string &effect_nam
 	return false;
 }
 
-void reshade::runtime::render_technique(api::effect_technique handle, api::command_list *cmd_list, api::resource_view rtv, api::resource_view rtv_srgb)
-{
-	const auto tech = reinterpret_cast<technique *>(handle.handle);
-	if (tech == nullptr)
-		return;
-
-	if (is_loading())
-		return; // Skip reload enqueue below when effects are already loading, to avoid enqueing an effect for creation that is already in the process of being created
-
-	if (rtv == 0)
-		return;
-	if (rtv_srgb == 0)
-		rtv_srgb = rtv;
-
-	const api::resource back_buffer_resource = _device->get_resource_from_view(rtv);
-
-	size_t permutation_index = 0;
-#if RESHADE_ADDON
-	if (!_is_in_present_call &&
-		// Special case for when add-on passed in the back buffer, which behaves as if this was called from within present, using the default permutation
-		back_buffer_resource != get_current_back_buffer())
-	{
-		const api::resource_desc back_buffer_desc = _device->get_resource_desc(back_buffer_resource);
-		if (back_buffer_desc.texture.samples > 1)
-			return; // Multisampled render targets are not supported
-
-		api::format color_format = back_buffer_desc.texture.format;
-		if (api::format_to_typeless(color_format) == color_format)
-			color_format = _device->get_resource_view_desc(rtv).format;
-
-		// Ensure dimensions and format of the effect color resource matches that of the input back buffer resource (so that the copy to the effect color resource succeeds)
-		// Never perform an immediate reload here, as the list of techniques must not be modified in case this was called from within 'enumerate_techniques'!
-		permutation_index = add_effect_permutation(back_buffer_desc.texture.width, back_buffer_desc.texture.height, color_format, _effect_permutations[0].stencil_format, api::color_space::unknown);
-		if (permutation_index == std::numeric_limits<size_t>::max())
-			return;
-	}
-
-	const size_t effect_index = tech->effect_index;
-
-	if (permutation_index >= tech->permutations.size() ||
-		(!tech->permutations[permutation_index].created && _effects[effect_index].permutations[permutation_index].assembly.empty()))
-	{
-		if (std::find(_reload_required_effects.begin(), _reload_required_effects.end(), std::make_pair(effect_index, permutation_index)) == _reload_required_effects.end())
-			_reload_required_effects.emplace_back(effect_index, permutation_index);
-		return;
-	}
-
-	// Queue effect file for initialization if it was not fully loaded yet
-	if (!tech->permutations[permutation_index].created)
-	{
-		if (std::find(_reload_create_queue.cbegin(), _reload_create_queue.cend(), std::make_pair(effect_index, permutation_index)) == _reload_create_queue.cend())
-			_reload_create_queue.emplace_back(effect_index, permutation_index);
-		return;
-	}
-
-	if (!_is_in_present_call)
-		capture_state(cmd_list, _app_state);
-
-	invoke_addon_event<addon_event::reshade_begin_effects>(this, cmd_list, rtv, rtv_srgb);
-
-	const bool was_is_in_api_call = _is_in_api_call;
-	_is_in_api_call = true;
-#endif
-
-	render_technique(*tech, cmd_list, back_buffer_resource, rtv, rtv_srgb, permutation_index);
-
-#if RESHADE_ADDON
-	_is_in_api_call = was_is_in_api_call;
-
-	invoke_addon_event<addon_event::reshade_finish_effects>(this, cmd_list, rtv, rtv_srgb);
-
-	if (!_is_in_present_call)
-		apply_state(cmd_list, _app_state);
-#endif
-}
-
 bool reshade::runtime::get_effects_state() const
 {
 	return _effects_enabled;
@@ -1405,31 +1300,6 @@ bool reshade::runtime::get_effects_state() const
 void reshade::runtime::set_effects_state(bool enabled)
 {
 	_effects_enabled = enabled;
-}
-
-void reshade::runtime::save_current_preset() const
-{
-	save_current_preset(ini_file::load_cache(_current_preset_path));
-}
-void reshade::runtime::export_current_preset(const char *path_in) const
-{
-	if (path_in == nullptr)
-		return;
-
-	std::filesystem::path preset_path = std::filesystem::u8path(path_in);
-
-	std::error_code ec;
-	resolve_path(preset_path, ec);
-
-	if (ini_file *const cached_preset = ini_file::find_cache(preset_path))
-	{
-		save_current_preset(*cached_preset);
-		return;
-	}
-
-	ini_file preset(preset_path);
-	save_current_preset(preset);
-	preset.save();
 }
 
 void reshade::runtime::get_current_preset_path(char *path, size_t *size) const
@@ -1449,75 +1319,6 @@ void reshade::runtime::get_current_preset_path(char *path, size_t *size) const
 		path[*size] = '\0';
 	}
 }
-void reshade::runtime::set_current_preset_path(const char *path_in)
-{
-	if (path_in == nullptr)
-		return;
-
-	std::filesystem::path preset_path = std::filesystem::u8path(path_in);
-
-	// Only change preset when this is a valid preset path
-	std::error_code ec;
-	if (resolve_preset_path(preset_path, ec))
-	{
-		if (is_loading())
-		{
-			_current_preset_path = std::move(preset_path);
-		}
-		else
-		{
-			// Stop any preset transition that may still be happening
-			_is_in_preset_transition = false;
-
-			// Reload preset even if it is the same as before
-			if (preset_path != _current_preset_path)
-			{
-				// First save current preset, before switching to a new one
-				save_current_preset();
-
-				_current_preset_path = std::move(preset_path);
-
-				save_config();
-			}
-
-			load_current_preset();
-		}
-	}
-}
-
-void reshade::runtime::reorder_techniques(size_t count, const api::effect_technique *techniques)
-{
-	if (count > _techniques.size())
-		return;
-
-	std::vector<size_t> technique_indices(_techniques.size());
-	for (size_t i = 0; i < count; ++i)
-	{
-		const auto tech = reinterpret_cast<technique *>(techniques[i].handle);
-		if (tech == nullptr)
-			return;
-
-		technique_indices[i] = tech - _techniques.data();
-	}
-	for (size_t i = count, k = 0; i < technique_indices.size(); ++i, ++k)
-	{
-		for (auto beg = technique_indices.cbegin(), end = technique_indices.cbegin() + i; std::find(beg, end, _technique_sorting[k]) != end; ++k)
-			continue;
-
-		technique_indices[i] = _technique_sorting[k];
-	}
-
-#if RESHADE_ADDON
-	const bool was_is_in_api_call = _is_in_api_call;
-	_is_in_api_call = true;
-#endif
-
-	reorder_techniques(std::move(technique_indices));
-
-#if RESHADE_ADDON
-	_is_in_api_call = was_is_in_api_call;
-#endif
-}
 
 #if RESHADE_GUI == 0
 bool reshade::runtime::open_overlay(bool /*open*/, api::input_source /*source*/)
@@ -1525,18 +1326,6 @@ bool reshade::runtime::open_overlay(bool /*open*/, api::input_source /*source*/)
 	return false;
 }
 #endif
-
-void reshade::runtime::set_color_space(api::color_space color_space)
-{
-	if (color_space == _back_buffer_color_space || color_space == api::color_space::unknown || !_is_initialized)
-		return;
-
-	_back_buffer_color_space = color_space;
-	_effect_permutations[0].color_space = color_space;
-
-	if (_frame_count != 0) // Do not need to reload effects here if they are already getting reloaded on next present anyway
-		reload_effects();
-}
 
 void reshade::runtime::reload_effect_next_frame(const char *effect_name)
 {

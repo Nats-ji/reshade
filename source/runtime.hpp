@@ -62,15 +62,6 @@ namespace reshade
 		/// </summary>
 		bool is_loading() const { return _reload_remaining_effects != std::numeric_limits<size_t>::max() || !_reload_create_queue.empty(); }
 
-		void render_effects(api::command_list *cmd_list, api::resource_view rtv, api::resource_view rtv_srgb) final;
-		void render_technique(api::effect_technique handle, api::command_list *cmd_list, api::resource_view rtv, api::resource_view rtv_srgb) final;
-
-		/// <summary>
-		/// Captures a screenshot of the current back buffer resource and writes it to an image file on disk.
-		/// </summary>
-		void save_screenshot(const std::string_view postfix = std::string_view());
-		bool capture_screenshot(void *pixels) final { return get_texture_data(_back_buffer_resolved != 0 ? _back_buffer_resolved : _swapchain->get_current_back_buffer(), _back_buffer_resolved != 0 ? api::resource_usage::render_target : api::resource_usage::present, static_cast<uint8_t *>(pixels)); }
-
 		void get_screenshot_width_and_height(uint32_t *out_width, uint32_t *out_height) const final { *out_width = _width; *out_height = _height; }
 
 		bool is_key_down(uint32_t keycode) const final;
@@ -127,8 +118,6 @@ namespace reshade
 		bool get_annotation_uint_from_texture_variable(api::effect_texture_variable variable, const char *name, uint32_t *values, size_t count, size_t array_index = 0) const final;
 		bool get_annotation_string_from_texture_variable(api::effect_texture_variable variable, const char *name, char *value, size_t *value_size) const final;
 
-		void update_texture(api::effect_texture_variable variable, const uint32_t width, const uint32_t height, const void *pixels) final;
-
 		void get_texture_binding(api::effect_texture_variable variable, api::resource_view *out_srv, api::resource_view *out_srv_srgb) const final;
 
 		void update_texture_bindings(const char *semantic, api::resource_view srv, api::resource_view srv_srgb) final;
@@ -147,7 +136,6 @@ namespace reshade
 		bool get_annotation_string_from_technique(api::effect_technique technique, const char *name, char *value, size_t *value_size) const final;
 
 		bool get_technique_state(api::effect_technique technique) const final;
-		void set_technique_state(api::effect_technique technique, bool enabled) final;
 
 		bool get_preprocessor_definition(const char *name, char *value, size_t *value_size) const final;
 		bool get_preprocessor_definition_for_effect(const char *effect_name, const char *name, char *value, size_t *value_size) const final;
@@ -157,61 +145,15 @@ namespace reshade
 		bool get_effects_state() const final;
 		void set_effects_state(bool enabled) final;
 
-		void save_current_preset() const final;
-		void export_current_preset(const char *path) const final;
 
 		void get_current_preset_path(char *path, size_t *path_size) const final;
-		void set_current_preset_path(const char *path) final;
-
-		void reorder_techniques(size_t count, const api::effect_technique *techniques) final;
 
 		bool open_overlay(bool open, api::input_source source) final;
-
-		void set_color_space(api::color_space color_space) final;
 
 		void reload_effect_next_frame(const char *effect_name) final;
 
 	private:
 		static void check_for_update();
-
-		void load_config();
-		void save_config() const;
-
-		void load_current_preset();
-		void save_current_preset(ini_file &preset) const;
-
-		bool switch_to_next_preset(std::filesystem::path filter_path, bool reversed = false);
-
-		bool load_effect(const std::filesystem::path &source_file, const ini_file &preset, size_t effect_index, size_t permutation_index, bool force_load = false, bool preprocess_required = false);
-		bool create_effect(size_t effect_index, size_t permutation_index);
-		bool create_effect_sampler_state(const reshadefx::sampler_desc &desc, api::sampler &sampler);
-		void destroy_effect(size_t effect_index, bool unload = true);
-
-		void load_textures(size_t effect_index);
-		bool create_texture(texture &texture);
-		void destroy_texture(texture &texture);
-
-		void enable_technique(technique &technique);
-		void disable_technique(technique &technique);
-
-		void reorder_techniques(std::vector<size_t> &&technique_indices);
-
-		void load_effects(bool force_load_all = false);
-		bool reload_effect(size_t effect_index);
-		void reload_effects(bool force_load_all = false);
-		void destroy_effects();
-
-		bool load_effect_cache(const std::string &id, const std::string &type, std::string &data) const;
-		bool save_effect_cache(const std::string &id, const std::string &type, const std::string &data) const;
-		void clear_effect_cache();
-
-		auto add_effect_permutation(uint32_t width, uint32_t height, api::format color_format, api::format stencil_format, api::color_space color_space) -> size_t;
-
-		void update_effects();
-		void render_technique(technique &technique, api::command_list *cmd_list, api::resource back_buffer_resource, api::resource_view back_buffer_rtv, api::resource_view back_buffer_rtv_srgb, size_t permutation_index);
-
-		void save_texture(const texture &texture);
-		void update_texture(texture &texture, uint32_t width, uint32_t height, uint32_t depth, const void *pixels);
 
 		void reset_uniform_value(uniform &variable);
 
@@ -233,10 +175,6 @@ namespace reshade
 		}
 
 		bool get_preprocessor_definition(const std::string &effect_name, const std::string &name, int scope_mask, std::vector<std::pair<std::string, std::string>> *&scope, std::vector<std::pair<std::string, std::string>>::iterator &value) const;
-
-		bool get_texture_data(api::resource resource, api::resource_usage state, uint8_t *pixels);
-
-		bool execute_screenshot_post_save_command(const std::filesystem::path &screenshot_path, unsigned int screenshot_count, std::string_view postfix);
 
 		api::swapchain *const _swapchain;
 		api::device *const _device;
@@ -442,9 +380,6 @@ namespace reshade
 		api::resource _imgui_indices[4] = {};
 		int _imgui_num_vertices[4] = {};
 		api::resource _imgui_vertices[4] = {};
-
-		api::resource _vr_overlay_tex = {};
-		api::resource_view _vr_overlay_target = {};
 		#pragma endregion
 
 		#pragma region Overlay Home
@@ -512,7 +447,6 @@ namespace reshade
 		void open_code_editor(size_t effect_index, size_t permutation_index, const std::string &entry_point);
 		void open_code_editor(size_t effect_index, const std::filesystem::path &path);
 		void open_code_editor(editor_instance &instance) const;
-		void draw_code_editor(editor_instance &instance);
 
 		std::vector<editor_instance> _editors;
 		uint32_t _editor_palette[imgui::code_editor::color_palette_max];

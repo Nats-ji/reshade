@@ -92,13 +92,11 @@ namespace reshade { namespace api
 		/// <param name="cmd_list">Command list to add effect rendering commands to.</param>
 		/// <param name="rtv">Render target view to use for passes that write to the back buffer with <c>SRGBWriteEnabled</c> state set to <see langword="false"/> (this should be a render target view of the target resource, created with a non-sRGB format variant).</param>
 		/// <param name="rtv_srgb">Render target view to use for passes that write to the back buffer with <c>SRGBWriteEnabled</c> state set to <see langword="true"/> (this should be a render target view of the target resource, created with a sRGB format variant).</param>
-		virtual void render_effects(command_list *cmd_list, resource_view rtv, resource_view rtv_srgb) = 0;
 
 		/// <summary>
 		/// Captures a screenshot of the current back buffer resource and returns its image data.
 		/// </summary>
 		/// <param name="pixels">Pointer to an array of <c>width * height * bpp</c> bytes the image data is written to (where <c>bpp</c> is the number of bytes per pixel of the back buffer format).</param>
-		virtual bool capture_screenshot(void *pixels) = 0;
 
 		/// <summary>
 		/// Gets the current buffer dimensions of the swap chain.
@@ -496,7 +494,6 @@ namespace reshade { namespace api
 		/// <param name="width">Width of the image data.</param>
 		/// <param name="height">Height of the image data.</param>
 		/// <param name="pixels">Pointer to an array of <c>width * height * bpp</c> bytes the image data is read from (where <c>bpp</c> is the number of bytes per pixel of the texture format).</param>
-		virtual void update_texture(effect_texture_variable variable, const uint32_t width, const uint32_t height, const void *pixels) = 0;
 
 		/// <summary>
 		/// Gets the shader resource view that is bound to the specified texture <paramref name="variable"/>.
@@ -619,12 +616,6 @@ namespace reshade { namespace api
 		/// <param name="technique">Opaque handle to the technique.</param>
 		/// <returns><see langword="true"/> if the technique is enabled, or <see langword="false"/> if it is disabled.</returns>
 		virtual bool get_technique_state(effect_technique technique) const = 0;
-		/// <summary>
-		/// Enables or disables the specified <paramref name="technique"/>.
-		/// </summary>
-		/// <param name="technique">Opaque handle to the technique.</param>
-		/// <param name="enabled">Set to <see langword="true"/> to enable the technique, or <see langword="false"/> to disable it.</param>
-		virtual void set_technique_state(effect_technique technique, bool enabled) = 0;
 
 		/// <summary>
 		/// Gets the value of a preprocessor definition.
@@ -648,20 +639,6 @@ namespace reshade { namespace api
 		virtual void set_preprocessor_definition(const char *name, const char *value) = 0;
 
 		/// <summary>
-		/// Applies a <paramref name="technique"/> to the specified render targets (regardless of the state of this technique).
-		/// </summary>
-		/// <remarks>
-		/// The width and height of the specified render target should match those used to render all other effects!
-		/// The resource the render target views point to has to be in the <see cref="resource_usage::render_target"/> state.
-		/// This call may modify current state on the command list (pipeline, render targets, descriptor tables, ...), so it may be necessary for an add-on to backup and restore state around it if the application does not bind all state again afterwards already.
-		/// </remarks>
-		/// <param name="technique">Opaque handle to the technique.</param>
-		/// <param name="cmd_list">Command list to add effect rendering commands to.</param>
-		/// <param name="rtv">Render target view to use for passes that write to the back buffer with <c>SRGBWriteEnabled</c> state set to <see langword="false"/>.</param>
-		/// <param name="rtv_srgb">Render target view to use for passes that write to the back buffer with <c>SRGBWriteEnabled</c> state set to <see langword="true"/>, or zero in which case the view from <paramref name="rtv"/> is used.</param>
-		virtual void render_technique(effect_technique technique, command_list *cmd_list, resource_view rtv, resource_view rtv_srgb = { 0 }) = 0;
-
-		/// <summary>
 		/// Gets whether rendering of effects is enabled or disabled.
 		/// </summary>
 		virtual bool get_effects_state() const = 0;
@@ -683,18 +660,6 @@ namespace reshade { namespace api
 			size_t path_size = SIZE;
 			get_current_preset_path(path, &path_size);
 		}
-		/// <summary>
-		/// Saves the currently active preset and then switches to the specified new preset.
-		/// </summary>
-		/// <param name="path">File path to the preset to switch to.</param>
-		virtual void set_current_preset_path(const char *path) = 0;
-
-		/// <summary>
-		/// Changes the rendering order of loaded techniques to that of the specified technique list.
-		/// </summary>
-		/// <param name="count">Number of handles in the technique list.</param>
-		/// <param name="techniques">Array of techniques in the order they should be rendered in.</param>
-		virtual void reorder_techniques(size_t count, const effect_technique *techniques) = 0;
 
 		/// <summary>
 		/// Makes ReShade block any keyboard and mouse input from reaching the game for the duration of the next frame.
@@ -754,11 +719,6 @@ namespace reshade { namespace api
 		}
 
 		/// <summary>
-		/// Saves the current preset with the current state of the loaded techniques and uniform variables.
-		/// </summary>
-		virtual void save_current_preset() const = 0;
-
-		/// <summary>
 		/// Gets the value of a preprocessor definition for the specified effect.
 		/// </summary>
 		/// <param name="effect_name">File name of the effect file the preprocessor definition is defined for.</param>
@@ -790,11 +750,6 @@ namespace reshade { namespace api
 		virtual bool open_overlay(bool open, input_source source) = 0;
 
 		/// <summary>
-		/// Overrides the color space used for presentation.
-		/// </summary>
-		virtual void set_color_space(color_space color_space) = 0;
-
-		/// <summary>
 		/// Resets the value of the specified uniform <paramref name="variable"/>.
 		/// </summary>
 		/// <param name="variable">Opaque handle to the uniform variable.</param>
@@ -806,11 +761,5 @@ namespace reshade { namespace api
 		/// </summary>
 		/// <param name="effect_name">File name of the effect file that should be reloaded, or <see langword="nullptr"/> to reload all effects.</param>
 		virtual void reload_effect_next_frame(const char *effect_name) = 0;
-
-		/// <summary>
-		/// Export the current preset with the current state of the loaded techniques and uniform variables.
-		/// </summary>
-		/// <param name="path">File path to the preset to save to.</param>
-		virtual void export_current_preset(const char *path) const = 0;
 	};
 } }

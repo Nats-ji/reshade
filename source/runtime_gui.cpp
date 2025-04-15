@@ -1272,45 +1272,6 @@ void reshade::runtime::open_code_editor(editor_instance &instance) const
 			instance.editor.add_error(line, message, message.find("error") == std::string::npos);
 		});
 }
-void reshade::runtime::draw_code_editor(editor_instance &instance)
-{
-	if (!instance.generated &&
-		(ImGui::Button((ICON_FK_FLOPPY " " + std::string(_("Save"))).c_str(), ImVec2(ImGui::GetContentRegionAvail().x, 0)) ||
-			(_input != nullptr && _input->is_key_pressed('S', true, false, false))))
-	{
-		// Write current editor text to file
-		if (FILE *const file = _wfsopen(instance.file_path.c_str(), L"wb", SH_DENYWR))
-		{
-			const std::string text = instance.editor.get_text();
-			fwrite(text.data(), 1, text.size(), file);
-			fclose(file);
-		}
-
-		if (!is_loading() && instance.effect_index < _effects.size())
-		{
-			// Clear modified flag, so that errors are updated next frame (see 'update_and_render_effects')
-			instance.editor.clear_modified();
-
-			reload_effect(instance.effect_index);
-
-			// Reloading an effect file invalidates all textures, but the statistics window may already have drawn references to those, so need to reset it
-			if (ImGuiWindow *const statistics_window = ImGui::FindWindowByName("###statistics"))
-				statistics_window->DrawList->CmdBuffer.clear();
-		}
-	}
-
-	instance.editor.render("##editor", _editor_palette, false, _imgui_context->IO.Fonts->Fonts[_imgui_context->IO.Fonts->Fonts.Size - 1]);
-
-	// Disable keyboard shortcuts when the window is focused so they don't get triggered while editing text
-	const bool is_focused = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
-	_ignore_shortcuts |= is_focused;
-
-	// Disable keyboard navigation starting with next frame when editor is focused so that the Alt key can be used without it switching focus to the menu bar
-	if (is_focused)
-		_imgui_context->IO.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;
-	else // Enable navigation again if focus is lost
-		_imgui_context->IO.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-}
 
 bool reshade::runtime::init_imgui_resources()
 {
