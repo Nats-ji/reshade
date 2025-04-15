@@ -168,14 +168,7 @@ reshade::runtime::runtime(api::swapchain *swapchain, api::command_queue *graphic
 	_graphics_queue(graphics_queue),
 	_start_time(std::chrono::high_resolution_clock::now()),
 	_last_present_time(_start_time),
-	_last_frame_duration(std::chrono::milliseconds(1)),
-	_effect_search_paths({ L".\\" }),
-	_texture_search_paths({ L".\\" }),
-	_config_path(config_path),
-	_screenshot_path(L".\\"),
-	_screenshot_name("%AppName% %Date% %Time%_%TimeMS%"), // Use a timestamp down to the millisecond because users may request more than one screenshot per-second
-	_screenshot_post_save_command_arguments("\"%TargetPath%\""),
-	_screenshot_post_save_command_working_directory(L".\\")
+	_last_frame_duration(std::chrono::milliseconds(1))
 {
 	assert(swapchain != nullptr && graphics_queue != nullptr);
 
@@ -207,12 +200,7 @@ reshade::runtime::runtime(api::swapchain *swapchain, api::command_queue *graphic
 	else
 		log::message(log::level::info, "Running on %s.", device_description);
 
-	// Default shortcut PrtScrn
-	_screenshot_key_data[0] = 0x2C;
-
 #if RESHADE_GUI
-	_timestamp_frequency = graphics_queue->get_timestamp_frequency();
-
 	init_gui();
 #endif
 }
@@ -420,14 +408,9 @@ bool reshade::runtime::on_init()
 	_is_initialized = true;
 	_last_reload_time = std::chrono::high_resolution_clock::now(); // Intentionally set to current time, so that duration to last reload is valid even when there is no reload on init
 
-	_preset_save_successful = true;
-	_last_screenshot_save_successful = true;
-
 #if RESHADE_ADDON
 	invoke_addon_event<addon_event::init_effect_runtime>(this);
 #endif
-
-	log::message(log::level::info, "Recreated runtime environment on runtime %p ('%s').", this, _config_path.u8string().c_str());
 
 	return true;
 
@@ -436,17 +419,6 @@ exit_failure:
 	_empty_tex = {};
 	_device->destroy_resource_view(_empty_srv);
 	_empty_srv = {};
-
-	for (const effect_permutation &permutation : _effect_permutations)
-	{
-		_device->destroy_resource(permutation.color_tex);
-		_device->destroy_resource_view(permutation.color_srv[0]);
-		_device->destroy_resource_view(permutation.color_srv[1]);
-
-		_device->destroy_resource(permutation.stencil_tex);
-		_device->destroy_resource_view(permutation.stencil_dsv);
-	}
-	_effect_permutations.clear();
 
 	_device->destroy_pipeline(_copy_pipeline);
 	_copy_pipeline = {};
@@ -486,17 +458,6 @@ void reshade::runtime::on_reset()
 	_device->destroy_resource_view(_empty_srv);
 	_empty_srv = {};
 
-	for (const effect_permutation &permutation : _effect_permutations)
-	{
-		_device->destroy_resource(permutation.color_tex);
-		_device->destroy_resource_view(permutation.color_srv[0]);
-		_device->destroy_resource_view(permutation.color_srv[1]);
-
-		_device->destroy_resource(permutation.stencil_tex);
-		_device->destroy_resource_view(permutation.stencil_dsv);
-	}
-	_effect_permutations.clear();
-
 	_device->destroy_pipeline(_copy_pipeline);
 	_copy_pipeline = {};
 	_device->destroy_pipeline_layout(_copy_pipeline_layout);
@@ -531,8 +492,6 @@ void reshade::runtime::on_reset()
 #if RESHADE_ADDON
 	invoke_addon_event<addon_event::destroy_effect_runtime>(this);
 #endif
-
-	log::message(log::level::info, "Destroyed runtime environment on runtime %p ('%s').", this, _config_path.u8string().c_str());
 }
 void reshade::runtime::on_present(api::command_queue *present_queue)
 {
@@ -559,10 +518,6 @@ void reshade::runtime::on_present(api::command_queue *present_queue)
 			// Wait on that before the immediate command list flush below
 			_graphics_queue->wait(_queue_sync_fence, _queue_sync_value);
 	}
-
-#if RESHADE_ADDON
-	_is_in_present_call = true;
-#endif
 
 	api::command_list *const cmd_list = _graphics_queue->get_immediate_command_list();
 
@@ -603,27 +558,6 @@ void reshade::runtime::on_present(api::command_queue *present_queue)
 	// Draw overlay
 	draw_gui();
 #endif
-
-	// All screenshots were created at this point, so reset request
-	_should_save_screenshot = false;
-
-	// Handle keyboard shortcuts
-	if (!_ignore_shortcuts && _input != nullptr)
-	{
-		if (_input->is_key_pressed(_effects_key_data, _force_shortcut_modifiers))
-		{
-#if RESHADE_ADDON
-			if (!invoke_addon_event<addon_event::reshade_set_effects_state>(this, !_effects_enabled))
-#endif
-				_effects_enabled = !_effects_enabled;
-		}
-
-		if (_input->is_key_pressed(_screenshot_key_data, _force_shortcut_modifiers))
-		{
-			_screenshot_count++;
-			_should_save_screenshot = true; // Remember that we want to save a screenshot next frame
-		}
-	}
 
 	// Stretch main render target back into MSAA back buffer if MSAA is active or copy when format conversion is required
 	if (_back_buffer_resolved != 0)
@@ -667,13 +601,6 @@ void reshade::runtime::on_present(api::command_queue *present_queue)
 		}
 	}
 
-#if RESHADE_ADDON
-	invoke_addon_event<addon_event::reshade_present>(this);
-
-	_is_in_present_call = false;
-#endif
-	_effects_rendered_this_frame = false;
-
 	// Apply previous state from application
 	apply_state(cmd_list, _app_state);
 
@@ -690,10 +617,6 @@ void reshade::runtime::on_present(api::command_queue *present_queue)
 		_input->next_frame();
 	if (_input_gamepad != nullptr)
 		_input_gamepad->next_frame();
-
-	// Save modified INI files
-	if (!ini_file::flush_cache())
-		_preset_save_successful = false;
 
 #if RESHADE_ADDON == 1
 	// Detect high network traffic

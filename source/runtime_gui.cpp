@@ -311,8 +311,6 @@ void reshade::runtime::build_font_atlas()
 
 	ImGui::SetCurrentContext(backup_context);
 
-	_show_splash = true;
-
 	int width, height;
 	unsigned char *pixels;
 	// This will also build the font atlas again if that previously failed above
@@ -348,7 +346,6 @@ void reshade::runtime::build_font_atlas()
 
 	_device->set_resource_name(_font_atlas_tex, "ImGui font atlas");
 }
-
 void reshade::runtime::draw_gui()
 {
 	assert(_is_initialized);
@@ -363,14 +360,6 @@ void reshade::runtime::draw_gui()
 			show_overlay = false; // Close when pressing the escape button, input focus is on the overlay and not currently navigating with the keyboard
 		else if (!_ignore_shortcuts && _input->is_key_pressed(_overlay_key_data, _force_shortcut_modifiers) && _imgui_context->ActiveId == 0)
 			show_overlay = !_show_overlay;
-
-		if (!_ignore_shortcuts)
-		{
-			if (_input->is_key_pressed(_fps_key_data, _force_shortcut_modifiers))
-				_show_fps = _show_fps ? 0 : 1;
-			if (_input->is_key_pressed(_frametime_key_data, _force_shortcut_modifiers))
-				_show_frametime = _show_frametime ? 0 : 1;
-		}
 	}
 
 	if (_input_gamepad != nullptr)
@@ -387,25 +376,10 @@ void reshade::runtime::draw_gui()
 	if (show_overlay != _show_overlay)
 		open_overlay(show_overlay, show_overlay_source);
 
-	const bool show_splash_window = _show_splash && (is_loading() || (_reload_count <= 1 && (_last_present_time - _last_reload_time) < std::chrono::seconds(5)) || (!_show_overlay && _tutorial_index == 0 && _input != nullptr));
-
-	// Do not show this message in the same frame the screenshot is taken (so that it won't show up on the GUI screenshot)
-	const bool show_screenshot_message = (_show_screenshot_message || !_last_screenshot_save_successful) && !_should_save_screenshot && (_last_present_time - _last_screenshot_time) < std::chrono::seconds(_last_screenshot_save_successful ? 3 : 5);
-	const bool show_preset_transition_message = _show_preset_transition_message && _is_in_preset_transition;
-	const bool show_message_window = show_screenshot_message || show_preset_transition_message || !_preset_save_successful;
-
-	const bool show_clock = _show_clock == 1 || (_show_overlay && _show_clock > 1);
-	const bool show_fps = _show_fps == 1 || (_show_overlay && _show_fps > 1);
-	const bool show_frametime = _show_frametime == 1 || (_show_overlay && _show_frametime > 1);
-	const bool show_preset_name = _show_preset_name == 1 || (_show_overlay && _show_preset_name > 1);
-	bool show_statistics_window = show_clock || show_fps || show_frametime || show_preset_name;
-
 	_ignore_shortcuts = false;
 	_block_input_next_frame = false;
-	_gather_gpu_statistics = false;
-	_effects_expanded_state &= 2;
 
-	if (!show_splash_window && !show_message_window && !show_statistics_window && !_show_overlay && _preview_texture == 0)
+	if (!_show_overlay)
 	{
 		if (_input != nullptr)
 		{
@@ -431,7 +405,7 @@ void reshade::runtime::draw_gui()
 
 	if (_input != nullptr)
 	{
-		imgui_io.MouseDrawCursor = _show_overlay && (!_should_save_screenshot || !_screenshot_save_gui);
+		imgui_io.MouseDrawCursor = _show_overlay;
 
 		// Scale mouse position in case render resolution does not match the window size
 		unsigned int max_position[2];
@@ -604,7 +578,6 @@ void reshade::runtime::draw_gui()
 	ImGui::NewFrame();
 
 	ImVec2 viewport_offset = ImVec2(0, 0);
-	const bool show_spinner = _reload_count > 1 && _tutorial_index != 0;
 
 	if (_show_overlay)
 	{
@@ -704,10 +677,6 @@ void reshade::runtime::draw_gui()
 
 bool reshade::runtime::init_imgui_resources()
 {
-	// Adjust default font size based on the vertical resolution
-	if (_font_size == 0)
-		_editor_font_size = _font_size = _height >= 2160 ? 26 : _height >= 1440 ? 20 : 13;
-
 	const bool has_combined_sampler_and_view = _device->check_capability(api::device_caps::sampler_with_resource_view);
 
 	if (_imgui_sampler_state == 0)
@@ -913,7 +882,6 @@ void reshade::runtime::render_imgui_draw_data(api::command_list *cmd_list, ImDra
 	const struct {
 		float ortho_projection[16];
 		api::color_space color_space;
-		float hdr_overlay_brightness;
 	} push_constants = {
 		{
 			2.0f / draw_data->DisplaySize.x, 0.0f, 0.0f, 0.0f,
@@ -922,12 +890,7 @@ void reshade::runtime::render_imgui_draw_data(api::command_list *cmd_list, ImDra
 							   -(2 * draw_data->DisplayPos.x + draw_data->DisplaySize.x + (adjust_half_pixel ? 1.0f : 0.0f)) / draw_data->DisplaySize.x,
 			(flip_y ? -1 : 1) * (2 * draw_data->DisplayPos.y + draw_data->DisplaySize.y + (adjust_half_pixel ? 1.0f : 0.0f)) / draw_data->DisplaySize.y, depth_clip_zero_to_one ? 0.5f : 0.0f, 1.0f,
 		},
-		_hdr_overlay_overwrite_color_space != api::color_space::unknown ?
-			_hdr_overlay_overwrite_color_space :
-			// Workaround for early HDR games, RGBA16F without a color space defined is pretty much guaranteed to be HDR for games
-			_back_buffer_format == api::format::r16g16b16a16_float ?
-				api::color_space::extended_srgb_linear : _back_buffer_color_space,
-		_hdr_overlay_brightness
+		_back_buffer_color_space
 	};
 
 	const bool has_combined_sampler_and_view = _device->check_capability(api::device_caps::sampler_with_resource_view);
@@ -1013,17 +976,6 @@ void reshade::runtime::destroy_imgui_resources()
 
 bool reshade::runtime::open_overlay(bool open, api::input_source source)
 {
-#if RESHADE_ADDON
-	if (!_is_in_api_call)
-	{
-		_is_in_api_call = true;
-		const bool skip = invoke_addon_event<addon_event::reshade_open_overlay>(this, open, source);
-		_is_in_api_call = false;
-		if (skip)
-			return false;
-	}
-#endif
-
 	_show_overlay = open;
 
 	if (open)

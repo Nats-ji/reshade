@@ -31,16 +31,6 @@ void reshade::create_effect_runtime(api::swapchain *swapchain, api::command_queu
 }
 void reshade::destroy_effect_runtime(api::swapchain *swapchain)
 {
-	if (const auto runtime = swapchain->get_private_data<reshade::runtime>())
-	{
-		const std::string config_name = runtime->get_config_path().stem().u8string();
-
-		// Free up the configuration name of this effect runtime instance for reuse
-		const std::unique_lock<std::shared_mutex> lock(s_runtime_config_names_mutex);
-
-		s_runtime_config_names.erase(config_name);
-	}
-
 	swapchain->destroy_private_data<reshade::runtime>();
 }
 

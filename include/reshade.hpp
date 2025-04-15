@@ -27,10 +27,6 @@ RESHADE_API_LIBRARY_DECL void ReShadeLogMessage(HMODULE module, int level, const
 
 RESHADE_API_LIBRARY_DECL void ReShadeGetBasePath(char *path, size_t *path_size);
 
-RESHADE_API_LIBRARY_DECL bool ReShadeGetConfigValue(HMODULE module, reshade::api::effect_runtime *runtime, const char *section, const char *key, char *value, size_t *value_size);
-RESHADE_API_LIBRARY_DECL void ReShadeSetConfigValue(HMODULE module, reshade::api::effect_runtime *runtime, const char *section, const char *key, const char *value);
-RESHADE_API_LIBRARY_DECL void ReShadeSetConfigArray(HMODULE module, reshade::api::effect_runtime *runtime, const char *section, const char *key, const char *value, size_t value_size);
-
 RESHADE_API_LIBRARY_DECL bool ReShadeRegisterAddon(HMODULE module, uint32_t api_version);
 RESHADE_API_LIBRARY_DECL void ReShadeUnregisterAddon(HMODULE module);
 
@@ -154,89 +150,6 @@ namespace reshade
 		static const auto func = reinterpret_cast<bool(*)(char *, size_t *)>(
 			GetProcAddress(internal::get_reshade_module_handle(), "ReShadeGetBasePath"));
 		func(path, path_size);
-#endif
-	}
-
-	/// <summary>
-	/// Gets a value from one of ReShade's config files.
-	/// This can use either the global config file (ReShade.ini next to the application executable), or one local to an effect runtime (ReShade[index].ini in the base path).
-	/// </summary>
-	/// <param name="runtime">Optional effect runtime to use the config file from, or <see langword="nullptr"/> to use the global config file.</param>
-	/// <param name="section">Name of the config section.</param>
-	/// <param name="key">Name of the config value.</param>
-	/// <param name="value">Pointer to a string buffer that is filled with the config value, or <see langword="nullptr"/> to query the necessary size.</param>
-	/// <param name="value_size">Pointer to an integer that contains the size of the string buffer and is set to the actual length of the string, including the null-terminator.</param>
-	/// <returns><see langword="true"/> if the specified config value exists, <see cref="false"/> otherwise.</returns>
-	inline bool get_config_value(api::effect_runtime *runtime, const char *section, const char *key, char *value, size_t *value_size)
-	{
-#if defined(RESHADE_API_LIBRARY)
-		return ReShadeGetConfigValue(nullptr, runtime, section, key, value, value_size);
-#else
-		static const auto func = reinterpret_cast<bool(*)(HMODULE, api::effect_runtime *, const char *, const char *, char *, size_t *)>(
-			GetProcAddress(internal::get_reshade_module_handle(), "ReShadeGetConfigValue"));
-		return func(internal::get_current_module_handle(), runtime, section, key, value, value_size);
-#endif
-	}
-#if _HAS_CXX17 || __cplusplus >= 201703L
-	template <typename T>
-	inline bool get_config_value(api::effect_runtime *runtime, const char *section, const char *key, T &value)
-	{
-		char value_string[32]; size_t value_length = sizeof(value_string) - 1;
-		if (!get_config_value(runtime, section, key, value_string, &value_length))
-			return false;
-		return std::from_chars(value_string, value_string + value_length, value).ec == std::errc {};
-	}
-	template <>
-	inline bool get_config_value<bool>(api::effect_runtime *runtime, const char *section, const char *key, bool &value)
-	{
-		int value_int = 0;
-		if (!get_config_value<int>(runtime, section, key, value_int))
-			return false;
-		value = (value_int != 0);
-		return true;
-	}
-#endif
-
-	/// <summary>
-	/// Sets and saves a value in one of ReShade's config files.
-	/// This can use either the global config file (ReShade.ini next to the application executable), or one local to an effect runtime (ReShade[index].ini in the base path).
-	/// </summary>
-	/// <param name="runtime">Optional effect runtime to use the config file from, or <see langword="nullptr"/> to use the global config file.</param>
-	/// <param name="section">Name of the config section.</param>
-	/// <param name="key">Name of the config value.</param>
-	/// <param name="value">Config value to set.</param>
-	inline void set_config_value(api::effect_runtime *runtime, const char *section, const char *key, const char *value)
-	{
-#if defined(RESHADE_API_LIBRARY)
-		ReShadeSetConfigValue(nullptr, runtime, section, key, value);
-#else
-		static const auto func = reinterpret_cast<void(*)(HMODULE, api::effect_runtime *, const char *, const char *, const char *)>(
-			GetProcAddress(internal::get_reshade_module_handle(), "ReShadeSetConfigValue"));
-		func(internal::get_current_module_handle(), runtime, section, key, value);
-#endif
-	}
-#if _HAS_CXX17 || __cplusplus >= 201703L
-	template <typename T>
-	inline void set_config_value(api::effect_runtime *runtime, const char *section, const char *key, const T &value)
-	{
-		char value_string[32] = "";
-		std::to_chars(value_string, value_string + sizeof(value_string) - 1, value);
-		set_config_value(runtime, section, key, static_cast<const char *>(value_string));
-	}
-	template <>
-	inline void set_config_value<bool>(api::effect_runtime *runtime, const char *section, const char *key, const bool &value)
-	{
-		set_config_value<int>(runtime, section, key, value ? 1 : 0);
-	}
-#endif
-	inline void set_config_value(api::effect_runtime *runtime, const char *section, const char *key, const char *value, size_t value_size)
-	{
-#if defined(RESHADE_API_LIBRARY)
-		ReShadeSetConfigArray(nullptr, runtime, section, key, value, value_size);
-#else
-		static const auto func = reinterpret_cast<void(*)(HMODULE, api::effect_runtime *, const char *, const char *, const char *, size_t)>(
-			GetProcAddress(internal::get_reshade_module_handle(), "ReShadeSetConfigArray"));
-		func(internal::get_current_module_handle(), runtime, section, key, value, value_size);
 #endif
 	}
 
