@@ -234,12 +234,6 @@ namespace reshade
 		void deinit_gui();
 		void build_font_atlas();
 
-		void load_config_gui(const ini_file &config);
-		void save_config_gui(ini_file &config) const;
-
-		void load_custom_style();
-		void save_custom_style() const;
-
 		void draw_gui();
 
 		bool init_imgui_resources();
