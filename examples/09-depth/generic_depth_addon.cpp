@@ -475,14 +475,6 @@ static void update_effect_runtime(effect_runtime *runtime)
 {
 	const auto &data = *runtime->get_private_data<generic_depth_data>();
 
-	runtime->update_texture_bindings("DEPTH", data.selected_shader_resource, data.selected_shader_resource);
-
-	runtime->enumerate_uniform_variables(nullptr, [&data](effect_runtime *runtime, effect_uniform_variable variable) {
-		char source[32];
-		if (runtime->get_annotation_string_from_uniform_variable(variable, "source", source) &&
-			std::strcmp(source, "bufready_depth") == 0)
-			runtime->set_uniform_value_bool(variable, data.selected_shader_resource != 0);
-	});
 }
 
 static void on_init_device(device *device)

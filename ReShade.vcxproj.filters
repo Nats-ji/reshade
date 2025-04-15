@@ -704,9 +704,6 @@
     <ClInclude Include="source\runtime.hpp">
       <Filter>core\runtime</Filter>
     </ClInclude>
-    <ClInclude Include="source\runtime_internal.hpp">
-      <Filter>core\runtime</Filter>
-    </ClInclude>
     <ClInclude Include="source\runtime_manager.hpp">
       <Filter>core\runtime</Filter>
     </ClInclude>

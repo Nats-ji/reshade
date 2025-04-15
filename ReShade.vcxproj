@@ -514,9 +514,6 @@
     <ProjectReference Include="deps\stb.vcxproj">
       <Project>{723bdef8-4a39-4961-bdab-54074012ff47}</Project>
     </ProjectReference>
-    <ProjectReference Include="ReShadeFX.vcxproj">
-      <Project>{d1c2099b-bec7-4993-8947-01d4a1f7eae2}</Project>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="examples\09-depth\generic_depth_addon.cpp">
@@ -748,7 +745,6 @@
     <ClInclude Include="source\platform_utils.hpp" />
     <ClInclude Include="source\reshade_api_object_impl.hpp" />
     <ClInclude Include="source\runtime.hpp" />
-    <ClInclude Include="source\runtime_internal.hpp" />
     <ClInclude Include="source\runtime_manager.hpp" />
     <ClInclude Include="source\state_block.hpp" />
     <ClInclude Include="source\vulkan\vulkan_hooks.hpp" />

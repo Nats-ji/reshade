@@ -78,103 +78,10 @@ namespace reshade
 
 		void block_input_next_frame() final;
 
-		void enumerate_uniform_variables(const char *effect_name, void(*callback)(effect_runtime *runtime, api::effect_uniform_variable variable, void *user_data), void *user_data) final;
-
-		api::effect_uniform_variable find_uniform_variable(const char *effect_name, const char *variable_name) const final;
-
-		void get_uniform_variable_type(api::effect_uniform_variable variable, api::format *out_base_type, uint32_t *out_rows, uint32_t *out_columns, uint32_t *out_array_length) const final;
-
-		void get_uniform_variable_name(api::effect_uniform_variable variable, char *name, size_t *name_size) const final;
-		void get_uniform_variable_effect_name(api::effect_uniform_variable variable, char *effect_name, size_t *effect_name_size) const final;
-
-		bool get_annotation_bool_from_uniform_variable(api::effect_uniform_variable variable, const char *name, bool *values, size_t count, size_t array_index = 0) const final;
-		bool get_annotation_float_from_uniform_variable(api::effect_uniform_variable variable, const char *name, float *values, size_t count, size_t array_index = 0) const final;
-		bool get_annotation_int_from_uniform_variable(api::effect_uniform_variable variable, const char *name, int32_t *values, size_t count, size_t array_index = 0) const final;
-		bool get_annotation_uint_from_uniform_variable(api::effect_uniform_variable variable, const char *name, uint32_t *values, size_t count, size_t array_index = 0) const final;
-		bool get_annotation_string_from_uniform_variable(api::effect_uniform_variable variable, const char *name, char *value, size_t *value_size) const final;
-
-		void reset_uniform_value(api::effect_uniform_variable variable);
-
-		void get_uniform_value_bool(api::effect_uniform_variable variable, bool *values, size_t count, size_t array_index) const final;
-		void get_uniform_value_float(api::effect_uniform_variable variable, float *values, size_t count, size_t array_index) const final;
-		void get_uniform_value_int(api::effect_uniform_variable variable, int32_t *values, size_t count, size_t array_index) const final;
-		void get_uniform_value_uint(api::effect_uniform_variable variable, uint32_t *values, size_t count, size_t array_index) const final;
-
-		void set_uniform_value_bool(api::effect_uniform_variable variable, const bool *values, size_t count, size_t array_index) final;
-		void set_uniform_value_float(api::effect_uniform_variable variable, const float *values, size_t count, size_t array_index) final;
-		void set_uniform_value_int(api::effect_uniform_variable variable, const int32_t *values, size_t count, size_t array_index) final;
-		void set_uniform_value_uint(api::effect_uniform_variable variable, const uint32_t *values, size_t count, size_t array_index) final;
-
-		void enumerate_texture_variables(const char *effect_name, void(*callback)(effect_runtime *runtime, api::effect_texture_variable variable, void *user_data), void *user_data) final;
-
-		api::effect_texture_variable find_texture_variable(const char *effect_name, const char *variable_name) const final;
-
-		void get_texture_variable_name(api::effect_texture_variable variable, char *name, size_t *name_size) const final;
-		void get_texture_variable_effect_name(api::effect_texture_variable variable, char *effect_name, size_t *effect_name_size) const final;
-
-		bool get_annotation_bool_from_texture_variable(api::effect_texture_variable variable, const char *name, bool *values, size_t count, size_t array_index = 0) const final;
-		bool get_annotation_float_from_texture_variable(api::effect_texture_variable variable, const char *name, float *values, size_t count, size_t array_index = 0) const final;
-		bool get_annotation_int_from_texture_variable(api::effect_texture_variable variable, const char *name, int32_t *values, size_t count, size_t array_index = 0) const final;
-		bool get_annotation_uint_from_texture_variable(api::effect_texture_variable variable, const char *name, uint32_t *values, size_t count, size_t array_index = 0) const final;
-		bool get_annotation_string_from_texture_variable(api::effect_texture_variable variable, const char *name, char *value, size_t *value_size) const final;
-
-		void get_texture_binding(api::effect_texture_variable variable, api::resource_view *out_srv, api::resource_view *out_srv_srgb) const final;
-
-		void update_texture_bindings(const char *semantic, api::resource_view srv, api::resource_view srv_srgb) final;
-
-		void enumerate_techniques(const char *effect_name, void(*callback)(effect_runtime *runtime, api::effect_technique technique, void *user_data), void *user_data) final;
-
-		api::effect_technique find_technique(const char *effect_name, const char *technique_name) final;
-
-		void get_technique_name(api::effect_technique technique, char *name, size_t *name_size) const final;
-		void get_technique_effect_name(api::effect_technique technique, char *effect_name, size_t *effect_name_size) const final;
-
-		bool get_annotation_bool_from_technique(api::effect_technique technique, const char *name, bool *values, size_t count, size_t array_index = 0) const final;
-		bool get_annotation_float_from_technique(api::effect_technique technique, const char *name, float *values, size_t count, size_t array_index = 0) const final;
-		bool get_annotation_int_from_technique(api::effect_technique technique, const char *name, int32_t *values, size_t count, size_t array_index = 0) const final;
-		bool get_annotation_uint_from_technique(api::effect_technique technique, const char *name, uint32_t *values, size_t count, size_t array_index = 0) const final;
-		bool get_annotation_string_from_technique(api::effect_technique technique, const char *name, char *value, size_t *value_size) const final;
-
-		bool get_technique_state(api::effect_technique technique) const final;
-
-		bool get_preprocessor_definition(const char *name, char *value, size_t *value_size) const final;
-		bool get_preprocessor_definition_for_effect(const char *effect_name, const char *name, char *value, size_t *value_size) const final;
-		void set_preprocessor_definition(const char *name, const char *value) final;
-		void set_preprocessor_definition_for_effect(const char *effect_name, const char *name, const char *value) final;
-
-		bool get_effects_state() const final;
-		void set_effects_state(bool enabled) final;
-
-
-		void get_current_preset_path(char *path, size_t *path_size) const final;
-
 		bool open_overlay(bool open, api::input_source source) final;
-
-		void reload_effect_next_frame(const char *effect_name) final;
 
 	private:
 		static void check_for_update();
-
-		void reset_uniform_value(uniform &variable);
-
-		void get_uniform_value_data(const uniform &variable, uint8_t *data, size_t size, size_t base_index) const;
-		template <typename T>
-		std::enable_if_t<std::is_same_v<T, bool> || std::is_same_v<T, int32_t> || std::is_same_v<T, uint32_t> || std::is_same_v<T, float>>
-		get_uniform_value(const uniform &variable, T *values, size_t count = 1, size_t array_index = 0) const;
-
-		void set_uniform_value_data(uniform &variable, const uint8_t *data, size_t size, size_t base_index);
-		template <typename T>
-		std::enable_if_t<std::is_same_v<T, bool> || std::is_same_v<T, int32_t> || std::is_same_v<T, uint32_t> || std::is_same_v<T, float>>
-		set_uniform_value(uniform &variable, const T *values, size_t count = 1, size_t array_index = 0);
-		template <typename T>
-		std::enable_if_t<std::is_same_v<T, bool> || std::is_same_v<T, int32_t> || std::is_same_v<T, uint32_t> || std::is_same_v<T, float>>
-		set_uniform_value(uniform &variable, T x, T y = T(0), T z = T(0), T w = T(0))
-		{
-			const T values[4] = { x, y, z, w };
-			set_uniform_value(variable, values, 4, 0);
-		}
-
-		bool get_preprocessor_definition(const std::string &effect_name, const std::string &name, int scope_mask, std::vector<std::pair<std::string, std::string>> *&scope, std::vector<std::pair<std::string, std::string>>::iterator &value) const;
 
 		api::swapchain *const _swapchain;
 		api::device *const _device;
@@ -237,11 +144,6 @@ namespace reshade
 		std::vector<std::pair<size_t, size_t>> _reload_create_queue;
 		std::atomic<size_t> _reload_remaining_effects = std::numeric_limits<size_t>::max();
 		void *_d3d_compiler_module = nullptr;
-
-		std::vector<effect> _effects;
-		std::vector<texture> _textures;
-		std::vector<technique> _techniques;
-		std::vector<size_t> _technique_sorting;
 
 		std::vector<std::thread> _worker_threads;
 		std::chrono::high_resolution_clock::time_point _last_reload_time;
@@ -444,23 +346,9 @@ namespace reshade
 			imgui::code_editor editor;
 		};
 
-		void open_code_editor(size_t effect_index, size_t permutation_index, const std::string &entry_point);
-		void open_code_editor(size_t effect_index, const std::filesystem::path &path);
-		void open_code_editor(editor_instance &instance) const;
-
 		std::vector<editor_instance> _editors;
 		uint32_t _editor_palette[imgui::code_editor::color_palette_max];
 		#pragma endregion
 #endif
 	};
-
-	template <> void runtime::get_uniform_value<bool>(const uniform &variable, bool *values, size_t count, size_t array_index) const;
-	template <> void runtime::get_uniform_value<float>(const uniform &variable, float *values, size_t count, size_t array_index) const;
-	template <> void runtime::get_uniform_value<int32_t>(const uniform &variable, int32_t *values, size_t count, size_t array_index) const;
-	template <> void runtime::get_uniform_value<uint32_t>(const uniform &variable, uint32_t *values, size_t count, size_t array_index) const;
-
-	template <> void runtime::set_uniform_value<bool>(uniform &variable, const bool *values, size_t count, size_t array_index);
-	template <> void runtime::set_uniform_value<float>(uniform &variable, const float *values, size_t count, size_t array_index);
-	template <> void runtime::set_uniform_value<int32_t>(uniform &variable, const int32_t *values, size_t count, size_t array_index);
-	template <> void runtime::set_uniform_value<uint32_t>(uniform &variable, const uint32_t *values, size_t count, size_t array_index);
 }

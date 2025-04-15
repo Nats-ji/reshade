@@ -6,7 +6,6 @@
 #if RESHADE_GUI
 
 #include "runtime.hpp"
-#include "runtime_internal.hpp"
 #include "version.h"
 #include "dll_log.hpp"
 #include "dll_resources.hpp"
@@ -1182,95 +1181,6 @@ void reshade::runtime::draw_gui()
 	}
 
 	ImGui::SetCurrentContext(backup_context);
-}
-
-void reshade::runtime::open_code_editor(size_t effect_index, size_t permutation_index, const std::string &entry_point)
-{
-	assert(effect_index < _effects.size());
-
-	const std::filesystem::path &path = _effects[effect_index].source_file;
-
-	if (const auto it = std::find_if(_editors.begin(), _editors.end(),
-			[effect_index, permutation_index, &path, &entry_point](const editor_instance &instance) {
-				return instance.effect_index == effect_index && instance.permutation_index == permutation_index && instance.file_path == path && instance.generated && instance.entry_point_name == entry_point;
-			});
-		it != _editors.end())
-	{
-		it->selected = true;
-		open_code_editor(*it);
-	}
-	else
-	{
-		editor_instance instance { effect_index, permutation_index, path, entry_point, true, true };
-		open_code_editor(instance);
-		_editors.push_back(std::move(instance));
-	}
-}
-void reshade::runtime::open_code_editor(size_t effect_index, const std::filesystem::path &path)
-{
-	assert(effect_index < _effects.size());
-
-	if (const auto it = std::find_if(_editors.begin(), _editors.end(),
-			[effect_index, &path](const editor_instance &instance) {
-				return instance.effect_index == effect_index && instance.file_path == path && !instance.generated;
-			});
-		it != _editors.end())
-	{
-		it->selected = true;
-		open_code_editor(*it);
-	}
-	else
-	{
-		editor_instance instance { effect_index, std::numeric_limits<size_t>::max(), path, std::string(), true, false };
-		open_code_editor(instance);
-		_editors.push_back(std::move(instance));
-	}
-}
-void reshade::runtime::open_code_editor(editor_instance &instance) const
-{
-	const effect &effect = _effects[instance.effect_index];
-
-	if (instance.generated)
-	{
-		const effect::permutation &permutation = effect.permutations[instance.permutation_index];
-
-		if (instance.entry_point_name.empty())
-			instance.editor.set_text(permutation.generated_code);
-		else
-			instance.editor.set_text(permutation.assembly_text.at(instance.entry_point_name));
-		instance.editor.set_readonly(true);
-		return; // Errors only apply to the effect source, not generated code
-	}
-
-	// Only update text if there is no undo history (in which case it can be assumed that the text is already up-to-date)
-	if (!instance.editor.is_modified() && !instance.editor.can_undo())
-	{
-		if (FILE *const file = _wfsopen(instance.file_path.c_str(), L"rb", SH_DENYWR))
-		{
-			fseek(file, 0, SEEK_END);
-			const size_t file_size = ftell(file);
-			fseek(file, 0, SEEK_SET);
-
-			std::string text(file_size, '\0');
-			fread(text.data(), 1, file_size, file);
-
-			fclose(file);
-
-			instance.editor.set_text(text);
-			instance.editor.set_readonly(false);
-		}
-	}
-
-	instance.editor.clear_errors();
-
-	parse_errors(effect.errors,
-		[&instance](const std::string_view file, int line, const std::string_view message) {
-			// Ignore errors that aren't in the current source file
-			if (file != instance.file_path.u8string())
-				return;
-
-			instance.editor.add_error(line, message, message.find("error") == std::string::npos);
-		});
 }
 
 bool reshade::runtime::init_imgui_resources()
