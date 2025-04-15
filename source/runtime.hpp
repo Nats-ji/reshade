@@ -30,7 +30,7 @@ namespace reshade
 	class __declspec(uuid("77FF8202-5BEC-42AD-8CE0-397F3E84EAA6")) runtime : public api::effect_runtime
 	{
 	public:
-		runtime(api::swapchain *swapchain, api::command_queue *graphics_queue, const std::filesystem::path &config_path, bool is_vr);
+		runtime(api::swapchain *swapchain, api::command_queue *graphics_queue, const std::filesystem::path &config_path);
 		~runtime();
 
 		bool on_init();
@@ -249,7 +249,6 @@ namespace reshade
 		uint16_t _back_buffer_samples = 1;
 		api::format _back_buffer_format = api::format::unknown;
 		api::color_space _back_buffer_color_space = api::color_space::unknown;
-		bool _is_vr = false;
 
 #if RESHADE_ADDON
 		bool _is_in_api_call = false;
@@ -394,9 +393,7 @@ namespace reshade
 
 #if RESHADE_GUI
 		void init_gui();
-		bool init_gui_vr();
 		void deinit_gui();
-		void deinit_gui_vr();
 		void build_font_atlas();
 
 		void load_config_gui(const ini_file &config);
@@ -406,18 +403,6 @@ namespace reshade
 		void save_custom_style() const;
 
 		void draw_gui();
-		void draw_gui_vr();
-
-		void draw_gui_home();
-		void draw_gui_settings();
-		void draw_gui_statistics();
-		void draw_gui_log();
-		void draw_gui_about();
-#if RESHADE_ADDON
-		void draw_gui_addons();
-#endif
-		void draw_variable_editor();
-		void draw_technique_editor();
 
 		bool init_imgui_resources();
 		void render_imgui_draw_data(api::command_list *cmd_list, ImDrawData *draw_data, api::resource_view rtv);

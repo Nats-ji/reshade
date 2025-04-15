@@ -240,7 +240,7 @@ bool ReShadeCreateEffectRuntime(reshade::api::device_api api, void *opaque_devic
 		return false;
 	}
 
-	const auto runtime = new reshade::runtime(swapchain_impl, graphics_queue_impl, std::filesystem::u8path(config_path), false);
+	const auto runtime = new reshade::runtime(swapchain_impl, graphics_queue_impl, std::filesystem::u8path(config_path));
 	if (!runtime->on_init())
 	{
 		ReShadeDestroyEffectRuntime(runtime);

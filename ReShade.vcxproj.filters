@@ -378,9 +378,6 @@
     <ClCompile Include="source\runtime_gui.cpp">
       <Filter>core\runtime</Filter>
     </ClCompile>
-    <ClCompile Include="source\runtime_gui_vr.cpp">
-      <Filter>core\runtime</Filter>
-    </ClCompile>
     <ClCompile Include="source\runtime_manager.cpp">
       <Filter>core\runtime</Filter>
     </ClCompile>

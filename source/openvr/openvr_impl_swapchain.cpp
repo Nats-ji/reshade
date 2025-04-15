@@ -46,7 +46,7 @@ reshade::openvr::swapchain_impl::swapchain_impl(api::device *device, api::comman
 {
 	_is_opengl = device->get_api() == api::device_api::opengl;
 
-	create_effect_runtime(this, graphics_queue, true);
+	create_effect_runtime(this, graphics_queue);
 }
 
 reshade::openvr::swapchain_impl::~swapchain_impl()

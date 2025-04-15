@@ -173,11 +173,10 @@ static std::vector<std::filesystem::path> find_files(const std::vector<std::file
 	return files;
 }
 
-reshade::runtime::runtime(api::swapchain *swapchain, api::command_queue *graphics_queue, const std::filesystem::path &config_path, bool is_vr) :
+reshade::runtime::runtime(api::swapchain *swapchain, api::command_queue *graphics_queue, const std::filesystem::path &config_path) :
 	_swapchain(swapchain),
 	_device(swapchain->get_device()),
 	_graphics_queue(graphics_queue),
-	_is_vr(is_vr),
 	_start_time(std::chrono::high_resolution_clock::now()),
 	_last_present_time(_start_time),
 	_last_frame_duration(std::chrono::milliseconds(1)),
@@ -271,7 +270,7 @@ bool reshade::runtime::on_init()
 	// Create resolve texture and copy pipeline (do this before creating effect resources, to ensure correct back buffer format is set up)
 	if (back_buffer_desc.texture.samples > 1 ||
 		// Always use resolve texture in OpenGL to flip vertically and support sRGB + binding effect stencil
-		(_device->get_api() == api::device_api::opengl && !_is_vr) ||
+		(_device->get_api() == api::device_api::opengl) ||
 		// Some effects rely on there being an alpha channel available, so create resolve texture if that is not the case
 		(_back_buffer_format == api::format::r8g8b8x8_unorm || _back_buffer_format == api::format::b8g8r8x8_unorm))
 	{
@@ -431,13 +430,10 @@ bool reshade::runtime::on_init()
 #if RESHADE_GUI
 	if (!init_imgui_resources())
 		goto exit_failure;
-
-	if (_is_vr && !init_gui_vr())
-		goto exit_failure;
 #endif
 
 	const input::window_handle window = get_hwnd();
-	if (window != nullptr && !_is_vr)
+	if (window != nullptr)
 		_input = input::register_window(window);
 	else
 		_input.reset();
@@ -500,9 +496,6 @@ exit_failure:
 	_app_state = {};
 
 #if RESHADE_GUI
-	if (_is_vr)
-		deinit_gui_vr();
-
 	destroy_imgui_resources();
 #endif
 
@@ -563,9 +556,6 @@ void reshade::runtime::on_reset()
 	_back_buffer_color_space = api::color_space::unknown;
 
 #if RESHADE_GUI
-	if (_is_vr)
-		deinit_gui_vr();
-
 	destroy_imgui_resources();
 #endif
 
@@ -661,10 +651,7 @@ void reshade::runtime::on_present(api::command_queue *present_queue)
 
 #if RESHADE_GUI
 	// Draw overlay
-	if (_is_vr)
-		draw_gui_vr();
-	else
-		draw_gui();
+	draw_gui();
 
 	if (_should_save_screenshot && _screenshot_save_gui && (_show_overlay || (_preview_texture != 0 && _effects_enabled)))
 		save_screenshot("Overlay");

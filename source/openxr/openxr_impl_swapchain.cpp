@@ -14,7 +14,7 @@ reshade::openxr::swapchain_impl::swapchain_impl(api::device *device, api::comman
 	_device(device),
 	_graphics_queue(graphics_queue)
 {
-	create_effect_runtime(this, graphics_queue, true);
+	create_effect_runtime(this, graphics_queue);
 }
 
 reshade::openxr::swapchain_impl::~swapchain_impl()

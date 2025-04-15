@@ -13,7 +13,7 @@
 static std::shared_mutex s_runtime_config_names_mutex;
 static std::unordered_set<std::string> s_runtime_config_names;
 
-void reshade::create_effect_runtime(api::swapchain *swapchain, api::command_queue *graphics_queue, bool vr)
+void reshade::create_effect_runtime(api::swapchain *swapchain, api::command_queue *graphics_queue)
 {
 	if (graphics_queue == nullptr || swapchain->get_private_data<reshade::runtime>() != nullptr)
 		return;
@@ -22,30 +22,12 @@ void reshade::create_effect_runtime(api::swapchain *swapchain, api::command_queu
 
 	// Try to find a unique configuration name for this effect runtime instance
 	std::string config_name = "ReShade";
-	if (vr)
-		config_name += "VR";
-	{
-		const std::string config_name_base = config_name;
-
-		const std::unique_lock<std::shared_mutex> lock(s_runtime_config_names_mutex);
-
-		if (size_t max_runtimes = std::numeric_limits<size_t>::max();
-			global_config().get("INSTALL", "MaxEffectRuntimes", max_runtimes) &&
-			s_runtime_config_names.size() >= max_runtimes)
-			return;
-
-		for (int attempt = 1; attempt < 100 && s_runtime_config_names.find(config_name) != s_runtime_config_names.end(); ++attempt)
-			config_name = config_name_base + std::to_string(attempt + 1);
-
-		assert(s_runtime_config_names.find(config_name) == s_runtime_config_names.end());
-		s_runtime_config_names.insert(config_name);
-	}
 
 	const ini_file &config = ini_file::load_cache(g_reshade_base_path / std::filesystem::u8path(config_name + ".ini"));
 	if (config.get("GENERAL", "Disable"))
 		return;
 
-	swapchain->create_private_data<reshade::runtime>(swapchain, graphics_queue, config.path(), vr);
+	swapchain->create_private_data<reshade::runtime>(swapchain, graphics_queue, config.path());
 }
 void reshade::destroy_effect_runtime(api::swapchain *swapchain)
 {
