@@ -4,8 +4,6 @@
  */
 
 #include "dxgi_swapchain.hpp"
-#include "d3d10/d3d10_device.hpp"
-#include "d3d10/d3d10_impl_swapchain.hpp"
 #include "d3d11/d3d11_device.hpp"
 #include "d3d11/d3d11_device_context.hpp"
 #include "d3d11/d3d11_impl_swapchain.hpp"
@@ -29,35 +27,6 @@ thread_local bool g_in_dxgi_runtime = false;
 // SpecialK uses this private data GUID to track the current swap chain color space, so just do the same
 inline constexpr GUID SKID_SwapChainColorSpace = { 0x18b57e4, 0x1493, 0x4953, { 0xad, 0xf2, 0xde, 0x6d, 0x99, 0xcc, 0x5, 0xe5 } }; // {018B57E4-1493-4953-ADF2-DE6D99CC05E5}
 
-DXGISwapChain::DXGISwapChain(D3D10Device *device, IDXGISwapChain  *original) :
-	_orig(original),
-	_interface_version(0),
-	_direct3d_device(static_cast<ID3D10Device *>(device)),
-	_direct3d_command_queue(nullptr),
-	_direct3d_version(10),
-	_impl(new reshade::d3d10::swapchain_impl(device, original))
-{
-	assert(_orig != nullptr && _direct3d_device != nullptr);
-	// Explicitly add a reference to the device, to ensure it stays valid for the lifetime of this swap chain object
-	_direct3d_device->AddRef();
-
-	reshade::create_effect_runtime(_impl, device);
-	on_init(false);
-}
-DXGISwapChain::DXGISwapChain(D3D10Device *device, IDXGISwapChain1 *original) :
-	_orig(original),
-	_interface_version(1),
-	_direct3d_device(static_cast<ID3D10Device *>(device)),
-	_direct3d_command_queue(nullptr),
-	_direct3d_version(10),
-	_impl(new reshade::d3d10::swapchain_impl(device, original))
-{
-	assert(_orig != nullptr && _direct3d_device != nullptr);
-	_direct3d_device->AddRef();
-
-	reshade::create_effect_runtime(_impl, device);
-	on_init(false);
-}
 DXGISwapChain::DXGISwapChain(D3D11Device *device, IDXGISwapChain  *original) :
 	_orig(original),
 	_interface_version(0),
@@ -113,9 +82,6 @@ DXGISwapChain::~DXGISwapChain()
 	// Destroy effect runtime first to release all internal references to device objects
 	switch (_direct3d_version)
 	{
-	case 10:
-		delete static_cast<reshade::d3d10::swapchain_impl *>(_impl);
-		break;
 	case 11:
 		delete static_cast<reshade::d3d11::swapchain_impl *>(_impl);
 		break;
@@ -653,10 +619,6 @@ public:
 	{
 		switch (direct3d_version)
 		{
-		case 10:
-			// 'ID3D10Multithread' and 'ID3D11Multithread' are the same interface
-			static_cast<D3D10Device *>(static_cast<ID3D10Device *>(direct3d_device))->_orig->QueryInterface(&multithread);
-			break;
 		case 11:
 			static_cast<D3D11Device *>(static_cast<ID3D11Device *>(direct3d_device))->_immediate_context->_orig->QueryInterface(&multithread);
 			break;
@@ -752,23 +714,6 @@ void DXGISwapChain::on_present(UINT flags, [[maybe_unused]] const DXGI_PRESENT_P
 
 	switch (_direct3d_version)
 	{
-	case 10:
-#if RESHADE_ADDON
-		// Behave as if immediate command list is flushed
-		reshade::invoke_addon_event<reshade::addon_event::execute_command_list>(
-			static_cast<D3D10Device *>(static_cast<ID3D10Device *>(_direct3d_device)),
-			static_cast<D3D10Device *>(static_cast<ID3D10Device *>(_direct3d_device)));
-
-		reshade::invoke_addon_event<reshade::addon_event::present>(
-			static_cast<D3D10Device *>(static_cast<ID3D10Device *>(_direct3d_device)),
-			_impl,
-			nullptr,
-			nullptr,
-			params != nullptr ? params->DirtyRectsCount : 0,
-			params != nullptr ? reinterpret_cast<const reshade::api::rect *>(params->pDirtyRects) : nullptr);
-#endif
-		reshade::present_effect_runtime(_impl, static_cast<D3D10Device *>(static_cast<ID3D10Device *>(_direct3d_device)));
-		break;
 	case 11:
 #if RESHADE_ADDON
 		reshade::invoke_addon_event<reshade::addon_event::execute_command_list>(

@@ -171,15 +171,6 @@ static bool install_internal(HMODULE target_module, HMODULE replacement_module, 
 
 		// Filter out uninteresting functions
 		if (it != replacement_exports.cend() &&
-			std::strcmp(symbol.name, "CompatValue") != 0 &&
-			std::strcmp(symbol.name, "CompatString") != 0 &&
-			std::strcmp(symbol.name, "DXGIDumpJournal") != 0 &&
-			std::strcmp(symbol.name, "DXGIReportAdapterConfiguration") != 0 &&
-			std::strcmp(symbol.name, "DXGID3D10CreateDevice") != 0 &&
-			std::strcmp(symbol.name, "DXGID3D10CreateLayeredDevice") != 0 &&
-			std::strcmp(symbol.name, "DXGID3D10ETWRundown") != 0 &&
-			std::strcmp(symbol.name, "DXGID3D10GetLayeredDeviceSize") != 0 &&
-			std::strcmp(symbol.name, "DXGID3D10RegisterLayers") != 0 &&
 			std::strcmp(symbol.name, "D3D12PIXEventsReplaceBlock") != 0 &&
 			std::strcmp(symbol.name, "D3D12PIXGetThreadInfo") != 0 &&
 			std::strcmp(symbol.name, "D3D12PIXNotifyWakeFromFenceSignal") != 0 &&

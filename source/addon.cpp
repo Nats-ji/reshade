@@ -45,22 +45,12 @@ void ReShadeGetBasePath(char *path, size_t *size)
 	}
 }
 
-#include "d3d9/d3d9_impl_device.hpp"
-#include "d3d9/d3d9_impl_swapchain.hpp"
-#include "d3d10/d3d10_impl_device.hpp"
-#include "d3d10/d3d10_impl_swapchain.hpp"
 #include "d3d11/d3d11_impl_device.hpp"
 #include "d3d11/d3d11_impl_device_context.hpp"
 #include "d3d11/d3d11_impl_swapchain.hpp"
 #include "d3d12/d3d12_impl_device.hpp"
 #include "d3d12/d3d12_impl_command_queue.hpp"
 #include "d3d12/d3d12_impl_swapchain.hpp"
-#include "opengl/opengl_impl_device.hpp"
-#include "opengl/opengl_impl_device_context.hpp"
-#include "opengl/opengl_impl_swapchain.hpp"
-#include "vulkan/vulkan_impl_device.hpp"
-#include "vulkan/vulkan_impl_command_queue.hpp"
-#include "vulkan/vulkan_impl_swapchain.hpp"
 
 bool ReShadeCreateEffectRuntime(reshade::api::device_api api, void *opaque_device, void *opaque_command_queue, void *opaque_swapchain, const char *config_path, reshade::api::effect_runtime **out_runtime)
 {
@@ -76,34 +66,6 @@ bool ReShadeCreateEffectRuntime(reshade::api::device_api api, void *opaque_devic
 
 	switch (api)
 	{
-	case reshade::api::device_api::d3d9:
-	{
-		com_ptr<IDirect3DDevice9> device;
-		com_ptr<IDirect3DSwapChain9> swapchain;
-		if (FAILED(static_cast<IUnknown *>(opaque_swapchain)->QueryInterface(&swapchain)))
-			return false;
-		if (FAILED(swapchain->GetDevice(&device)) || device.get() != opaque_device)
-			return false;
-
-		const auto device_impl = new reshade::d3d9::device_impl(device.get());
-		swapchain_impl = new reshade::d3d9::swapchain_impl(device_impl, swapchain.get());
-		graphics_queue_impl = device_impl;
-		break;
-	}
-	case reshade::api::device_api::d3d10:
-	{
-		com_ptr<ID3D10Device1> device;
-		com_ptr<IDXGISwapChain> swapchain;
-		if (FAILED(static_cast<IUnknown *>(opaque_swapchain)->QueryInterface(&swapchain)))
-			return false;
-		if (FAILED(swapchain->GetDevice(IID_PPV_ARGS(&device))) || device.get() != opaque_device)
-			return false;
-
-		const auto device_impl = new reshade::d3d10::device_impl(device.get());
-		swapchain_impl = new reshade::d3d10::swapchain_impl(device_impl, swapchain.get());
-		graphics_queue_impl = device_impl;
-		break;
-	}
 	case reshade::api::device_api::d3d11:
 	{
 		com_ptr<ID3D11Device> device;
@@ -148,19 +110,6 @@ bool ReShadeCreateEffectRuntime(reshade::api::device_api api, void *opaque_devic
 		graphics_queue_impl = new reshade::d3d12::command_queue_impl(device_impl, command_queue.get());
 		break;
 	}
-	case reshade::api::device_api::opengl:
-	{
-		const HDC hdc = static_cast<HDC>(opaque_swapchain);
-		if (hdc == nullptr || WindowFromDC(hdc) == nullptr)
-			return false;
-
-		gl3wInit();
-
-		const auto device_impl = new reshade::opengl::device_impl(hdc, static_cast<HGLRC>(opaque_device));
-		swapchain_impl = new reshade::opengl::swapchain_impl(device_impl, hdc);
-		graphics_queue_impl = new reshade::opengl::device_context_impl(device_impl, static_cast<HGLRC>(opaque_device));
-		break;
-	}
 	default:
 		return false;
 	}
@@ -191,14 +140,6 @@ void ReShadeDestroyEffectRuntime(reshade::api::effect_runtime *runtime)
 
 	switch (device->get_api())
 	{
-	case reshade::api::device_api::d3d9:
-		delete static_cast<reshade::d3d9::swapchain_impl *>(swapchain);
-		delete static_cast<reshade::d3d9::device_impl *>(device);
-		break;
-	case reshade::api::device_api::d3d10:
-		delete static_cast<reshade::d3d10::swapchain_impl *>(swapchain);
-		delete static_cast<reshade::d3d10::device_impl *>(device);
-		break;
 	case reshade::api::device_api::d3d11:
 		delete static_cast<reshade::d3d11::swapchain_impl *>(swapchain);
 		delete static_cast<reshade::d3d11::device_context_impl *>(graphics_queue);
@@ -208,16 +149,6 @@ void ReShadeDestroyEffectRuntime(reshade::api::effect_runtime *runtime)
 		delete static_cast<reshade::d3d12::swapchain_impl *>(swapchain);
 		delete static_cast<reshade::d3d12::command_queue_impl *>(graphics_queue);
 		delete static_cast<reshade::d3d12::device_impl *>(device);
-		break;
-	case reshade::api::device_api::opengl:
-		delete static_cast<reshade::opengl::swapchain_impl *>(swapchain);
-		delete static_cast<reshade::opengl::device_context_impl *>(graphics_queue);
-		delete static_cast<reshade::opengl::device_impl *>(device);
-		break;
-	case reshade::api::device_api::vulkan:
-		delete static_cast<reshade::vulkan::swapchain_impl *>(swapchain);
-		delete static_cast<reshade::vulkan::command_queue_impl *>(graphics_queue);
-		delete static_cast<reshade::vulkan::device_impl *>(device);
 		break;
 	}
 }

@@ -8,15 +8,12 @@
 #include <dxgi1_6.h>
 #include <mutex>
 
-struct D3D10Device;
 struct D3D11Device;
 struct D3D12CommandQueue;
 namespace reshade::api { struct swapchain; }
 
 struct DECLSPEC_UUID("1F445F9F-9887-4C4C-9055-4E3BADAFCCA8") DXGISwapChain final : IDXGISwapChain4
 {
-	DXGISwapChain(D3D10Device *device, IDXGISwapChain  *original);
-	DXGISwapChain(D3D10Device *device, IDXGISwapChain1 *original);
 	DXGISwapChain(D3D11Device *device, IDXGISwapChain  *original);
 	DXGISwapChain(D3D11Device *device, IDXGISwapChain1 *original);
 	DXGISwapChain(D3D12CommandQueue *command_queue, IDXGISwapChain3 *original);

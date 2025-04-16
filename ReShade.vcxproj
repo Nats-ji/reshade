@@ -518,18 +518,6 @@
   <ItemGroup>
     <ClCompile Include="source\addon.cpp" />
     <ClCompile Include="source\addon_manager.cpp" />
-    <ClCompile Include="source\d2d1\d2d1.cpp" />
-    <ClCompile Include="source\d3d10\d3d10.cpp" />
-    <ClCompile Include="source\d3d10\d3d10_device.cpp" />
-    <ClCompile Include="source\d3d10\d3d10_impl_command_list.cpp">
-      <DisableSpecificWarnings>4063;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-    </ClCompile>
-    <ClCompile Include="source\d3d10\d3d10_impl_command_queue.cpp" />
-    <ClCompile Include="source\d3d10\d3d10_impl_device.cpp" />
-    <ClCompile Include="source\d3d10\d3d10_impl_state_block.cpp" />
-    <ClCompile Include="source\d3d10\d3d10_impl_swapchain.cpp" />
-    <ClCompile Include="source\d3d10\d3d10_impl_type_convert.cpp" />
-    <ClCompile Include="source\d3d10\d3d10_resource.cpp" />
     <ClCompile Include="source\d3d11\d3d11.cpp" />
     <ClCompile Include="source\d3d11\d3d11on12.cpp" />
     <ClCompile Include="source\d3d11\d3d11on12_device.cpp" />
@@ -561,25 +549,6 @@
     <ClCompile Include="source\d3d12\d3d12_pipeline_library.cpp" />
     <ClCompile Include="source\d3d12\d3d12_pix.cpp" />
     <ClCompile Include="source\d3d12\d3d12_resource.cpp" />
-    <ClCompile Include="source\d3d9\d3d9.cpp" />
-    <ClCompile Include="source\d3d9\d3d9on12.cpp" />
-    <ClCompile Include="source\d3d9\d3d9on12_device.cpp" />
-    <ClCompile Include="source\d3d9\d3d9_device.cpp">
-      <DisableSpecificWarnings Condition="'$(Configuration)'=='Debug App'">4458;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-    </ClCompile>
-    <ClCompile Include="source\d3d9\d3d9_impl_command_list.cpp" />
-    <ClCompile Include="source\d3d9\d3d9_impl_command_queue.cpp" />
-    <ClCompile Include="source\d3d9\d3d9_impl_device.cpp" />
-    <ClCompile Include="source\d3d9\d3d9_impl_state_block.cpp" />
-    <ClCompile Include="source\d3d9\d3d9_impl_swapchain.cpp" />
-    <ClCompile Include="source\d3d9\d3d9_impl_type_convert.cpp" />
-    <ClCompile Include="source\d3d9\d3d9_internal.cpp" />
-    <ClCompile Include="source\d3d9\d3d9_pix.cpp" />
-    <ClCompile Include="source\d3d9\d3d9_resource.cpp">
-      <DisableSpecificWarnings Condition="'$(Configuration)'=='Debug App'">4458;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-    </ClCompile>
-    <ClCompile Include="source\d3d9\d3d9_swapchain.cpp" />
-    <ClCompile Include="source\ddraw\ddraw.cpp" />
     <ClCompile Include="source\dll_log.cpp" />
     <ClCompile Include="source\dll_main.cpp" />
     <ClCompile Include="source\dll_main_test_app.cpp">
@@ -587,7 +556,6 @@
     </ClCompile>
     <ClCompile Include="source\dll_resources.cpp" />
     <ClCompile Include="source\dxgi\dxgi.cpp" />
-    <ClCompile Include="source\dxgi\dxgi_d3d10.cpp" />
     <ClCompile Include="source\dxgi\dxgi_device.cpp" />
     <ClCompile Include="source\dxgi\dxgi_swapchain.cpp" />
     <ClCompile Include="source\hook.cpp" />
@@ -605,39 +573,12 @@
     <ClCompile Include="source\input_gamepad.cpp">
       <PreprocessorDefinitions>_WIN32_WINNT=_WIN32_WINNT_WIN7;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="source\opengl\opengl_hooks.cpp" />
-    <ClCompile Include="source\opengl\opengl_hooks_ffp.cpp" />
-    <ClCompile Include="source\opengl\opengl_hooks_wgl.cpp" />
-    <ClCompile Include="source\opengl\opengl_impl_command_list.cpp" />
-    <ClCompile Include="source\opengl\opengl_impl_command_queue.cpp" />
-    <ClCompile Include="source\opengl\opengl_impl_device.cpp" />
-    <ClCompile Include="source\opengl\opengl_impl_state_block.cpp" />
-    <ClCompile Include="source\opengl\opengl_impl_swapchain.cpp" />
-    <ClCompile Include="source\opengl\opengl_impl_type_convert.cpp" />
-    <ClCompile Include="source\openvr\openvr_hooks.cpp" />
-    <ClCompile Include="source\openvr\openvr_impl_swapchain.cpp" />
-    <ClCompile Include="source\openxr\openxr_hooks.cpp" />
-    <ClCompile Include="source\openxr\openxr_hooks_instance.cpp" />
-    <ClCompile Include="source\openxr\openxr_hooks_session.cpp" />
-    <ClCompile Include="source\openxr\openxr_impl_swapchain.cpp" />
     <ClCompile Include="source\platform_utils.cpp" />
     <ClCompile Include="source\runtime.cpp" />
     <ClCompile Include="source\runtime_api.cpp" />
     <ClCompile Include="source\runtime_gui.cpp" />
     <ClCompile Include="source\runtime_manager.cpp" />
     <ClCompile Include="source\state_block.cpp" />
-    <ClCompile Include="source\vulkan\vulkan_hooks.cpp" />
-    <ClCompile Include="source\vulkan\vulkan_hooks_cmd.cpp" />
-    <ClCompile Include="source\vulkan\vulkan_hooks_device.cpp" />
-    <ClCompile Include="source\vulkan\vulkan_hooks_instance.cpp" />
-    <ClCompile Include="source\vulkan\vulkan_impl_command_list.cpp" />
-    <ClCompile Include="source\vulkan\vulkan_impl_command_list_immediate.cpp" />
-    <ClCompile Include="source\vulkan\vulkan_impl_command_queue.cpp" />
-    <ClCompile Include="source\vulkan\vulkan_impl_device.cpp">
-      <PreprocessorDefinitions>VMA_IMPLEMENTATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="source\vulkan\vulkan_impl_swapchain.cpp" />
-    <ClCompile Include="source\vulkan\vulkan_impl_type_convert.cpp" />
     <ClCompile Include="source\windows\dinput.cpp" />
     <ClCompile Include="source\windows\dinput8.cpp" />
     <ClCompile Include="source\windows\user32.cpp" />
@@ -661,13 +602,6 @@
     <ClInclude Include="source\addon_manager.hpp" />
     <ClInclude Include="source\com_ptr.hpp" />
     <ClInclude Include="source\com_utils.hpp" />
-    <ClInclude Include="source\d3d10\d3d10_device.hpp" />
-    <ClInclude Include="source\d3d10\d3d10_impl_device.hpp" />
-    <ClInclude Include="source\d3d10\d3d10_impl_state_block.hpp" />
-    <ClInclude Include="source\d3d10\d3d10_impl_swapchain.hpp" />
-    <ClInclude Include="source\d3d10\d3d10_impl_type_convert.hpp" />
-    <ClInclude Include="source\d3d10\d3d10_resource.hpp" />
-    <ClInclude Include="source\d3d10\d3d10_resource_call_vtable.inl" />
     <ClInclude Include="source\d3d11\d3d11on12_device.hpp" />
     <ClInclude Include="source\d3d11\d3d11_command_list.hpp" />
     <ClInclude Include="source\d3d11\d3d11_device.hpp" />
@@ -695,15 +629,6 @@
     <ClInclude Include="source\d3d12\d3d12_resource.hpp" />
     <ClInclude Include="source\d3d12\d3d12_resource_call_vtable.inl" />
     <ClInclude Include="source\d3d12\descriptor_heap.hpp" />
-    <ClInclude Include="source\d3d9\d3d9on12_device.hpp" />
-    <ClInclude Include="source\d3d9\d3d9_device.hpp" />
-    <ClInclude Include="source\d3d9\d3d9_impl_device.hpp" />
-    <ClInclude Include="source\d3d9\d3d9_impl_state_block.hpp" />
-    <ClInclude Include="source\d3d9\d3d9_impl_swapchain.hpp" />
-    <ClInclude Include="source\d3d9\d3d9_impl_type_convert.hpp" />
-    <ClInclude Include="source\d3d9\d3d9_resource.hpp" />
-    <ClInclude Include="source\d3d9\d3d9_resource_call_vtable.inl" />
-    <ClInclude Include="source\d3d9\d3d9_swapchain.hpp" />
     <ClInclude Include="source\dll_log.hpp" />
     <ClInclude Include="source\dll_resources.hpp" />
     <ClInclude Include="source\dxgi\dxgi_device.hpp" />
@@ -723,27 +648,11 @@
     <ClInclude Include="source\localization.hpp" />
     <ClInclude Include="source\lockfree_linear_map.hpp" />
     <ClInclude Include="source\moving_average.hpp" />
-    <ClInclude Include="source\opengl\opengl_hooks.hpp" />
-    <ClInclude Include="source\opengl\opengl_impl_device.hpp" />
-    <ClInclude Include="source\opengl\opengl_impl_device_context.hpp" />
-    <ClInclude Include="source\opengl\opengl_impl_state_block.hpp" />
-    <ClInclude Include="source\opengl\opengl_impl_swapchain.hpp" />
-    <ClInclude Include="source\opengl\opengl_impl_type_convert.hpp" />
-    <ClInclude Include="source\openvr\openvr_impl_swapchain.hpp" />
-    <ClInclude Include="source\openxr\openxr_hooks.hpp" />
-    <ClInclude Include="source\openxr\openxr_impl_swapchain.hpp" />
     <ClInclude Include="source\platform_utils.hpp" />
     <ClInclude Include="source\reshade_api_object_impl.hpp" />
     <ClInclude Include="source\runtime.hpp" />
     <ClInclude Include="source\runtime_manager.hpp" />
     <ClInclude Include="source\state_block.hpp" />
-    <ClInclude Include="source\vulkan\vulkan_hooks.hpp" />
-    <ClInclude Include="source\vulkan\vulkan_impl_command_list.hpp" />
-    <ClInclude Include="source\vulkan\vulkan_impl_command_list_immediate.hpp" />
-    <ClInclude Include="source\vulkan\vulkan_impl_command_queue.hpp" />
-    <ClInclude Include="source\vulkan\vulkan_impl_device.hpp" />
-    <ClInclude Include="source\vulkan\vulkan_impl_swapchain.hpp" />
-    <ClInclude Include="source\vulkan\vulkan_impl_type_convert.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="res\resource.rc" />

@@ -4,7 +4,6 @@
  */
 
 #include "dxgi_swapchain.hpp"
-#include "d3d10/d3d10_device.hpp"
 #include "d3d11/d3d11_device.hpp"
 #include "d3d12/d3d12_command_queue.hpp"
 #include "dll_log.hpp" // Include late to get 'hr_to_string' helper function
@@ -263,13 +262,6 @@ static void dump_and_modify_swapchain_desc(DXGI_SWAP_CHAIN_DESC1 &desc, [[maybe_
 
 UINT query_device(IUnknown *&device, com_ptr<IUnknown> &device_proxy)
 {
-	if (com_ptr<D3D10Device> device_d3d10;
-		SUCCEEDED(device->QueryInterface(&device_d3d10)))
-	{
-		device = device_d3d10->_orig; // Set device pointer back to original object so that the swap chain creation functions work as expected
-		device_proxy = std::move(reinterpret_cast<com_ptr<IUnknown> &>(device_d3d10));
-		return 10;
-	}
 	if (com_ptr<D3D11Device> device_d3d11;
 		SUCCEEDED(device->QueryInterface(&device_d3d11)))
 	{
@@ -288,16 +280,6 @@ UINT query_device(IUnknown *&device, com_ptr<IUnknown> &device_proxy)
 	// Fall back to checking private data in case original device pointer was passed in (e.g. because D3D11 device was created with video support and then queried though 'D3D11Device::QueryInterface')
 	// Note that D3D11 devices can expose the 'ID3D10Device' interface too, if 'ID3D11Device::CreateDeviceContextState' has been called
 	// But since there is a follow-up check for the proxy 'D3D10Device' interface that is only set on real D3D10 devices, the query order doesn't matter here
-	if (com_ptr<ID3D10Device> device_d3d10_orig;
-		SUCCEEDED(device->QueryInterface(&device_d3d10_orig)))
-	{
-		if (com_ptr<D3D10Device> device_d3d10 = get_private_pointer_d3dx<D3D10Device>(device_d3d10_orig.get()))
-		{
-			assert(device_d3d10_orig == device_d3d10->_orig);
-			device_proxy = std::move(reinterpret_cast<com_ptr<IUnknown> &>(device_d3d10));
-			return 10;
-		}
-	}
 	if (com_ptr<ID3D11Device> device_d3d11_orig;
 		SUCCEEDED(device->QueryInterface(&device_d3d11_orig)))
 	{
@@ -321,12 +303,6 @@ static void init_swapchain_proxy(T *&swapchain, UINT direct3d_version, const com
 	if ((usage & DXGI_USAGE_RENDER_TARGET_OUTPUT) == 0)
 	{
 		reshade::log::message(reshade::log::level::warning, "Skipping swap chain due to missing 'DXGI_USAGE_RENDER_TARGET_OUTPUT' flag.");
-	}
-	else if (direct3d_version == 10)
-	{
-		const com_ptr<D3D10Device> &device = reinterpret_cast<const com_ptr<D3D10Device> &>(device_proxy);
-
-		swapchain_proxy = new DXGISwapChain(device.get(), swapchain); // Overwrite returned swap chain with proxy swap chain
 	}
 	else if (direct3d_version == 11)
 	{
