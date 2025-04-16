@@ -11,13 +11,7 @@
 #include "d3d12/d3d12_command_queue.hpp"
 #include "d3d12/d3d12_impl_swapchain.hpp"
 #include "dll_log.hpp" // Include late to get 'hr_to_string' helper function
-#include "addon_manager.hpp"
 #include "runtime_manager.hpp"
-
-#if RESHADE_ADDON
-extern bool modify_swapchain_desc(DXGI_SWAP_CHAIN_DESC &desc, UINT &sync_interval);
-extern bool modify_swapchain_desc(DXGI_SWAP_CHAIN_DESC1 &desc, UINT &sync_interval, DXGI_SWAP_CHAIN_FULLSCREEN_DESC *fullscreen_desc, HWND window);
-#endif
 
 extern UINT query_device(IUnknown *&device, com_ptr<IUnknown> &device_proxy);
 
@@ -239,22 +233,6 @@ HRESULT STDMETHODCALLTYPE DXGISwapChain::SetFullscreenState(BOOL Fullscreen, IDX
 
 	_current_fullscreen_state = -1;
 
-#if RESHADE_ADDON
-	HMONITOR hmonitor = nullptr;
-	if (pTarget != nullptr)
-	{
-		DXGI_OUTPUT_DESC output_desc = {};
-		pTarget->GetDesc(&output_desc);
-		hmonitor = output_desc.Monitor;
-	}
-
-	if (reshade::invoke_addon_event<reshade::addon_event::set_fullscreen_state>(_impl, Fullscreen != FALSE, hmonitor))
-	{
-		_current_fullscreen_state = Fullscreen;
-		return S_OK;
-	}
-#endif
-
 	const bool was_in_dxgi_runtime = g_in_dxgi_runtime;
 	g_in_dxgi_runtime = true;
 	const HRESULT hr = _orig->SetFullscreenState(Fullscreen, pTarget);
@@ -294,30 +272,6 @@ HRESULT STDMETHODCALLTYPE DXGISwapChain::ResizeBuffers(UINT BufferCount, UINT Wi
 		this, BufferCount, Width, Height, static_cast<int>(NewFormat), SwapChainFlags);
 
 	on_reset(true);
-
-	// Handle update of the swap chain description
-#if RESHADE_ADDON
-	{
-		DXGI_SWAP_CHAIN_DESC desc = {};
-		GetDesc(&desc);
-
-		desc.BufferCount = BufferCount;
-		desc.BufferDesc.Width = Width;
-		desc.BufferDesc.Height = Height;
-		if (NewFormat != DXGI_FORMAT_UNKNOWN)
-			desc.BufferDesc.Format = NewFormat;
-		desc.Flags = SwapChainFlags;
-
-		if (modify_swapchain_desc(desc, _sync_interval))
-		{
-			BufferCount = desc.BufferCount;
-			Width = desc.BufferDesc.Width;
-			Height = desc.BufferDesc.Height;
-			NewFormat = desc.BufferDesc.Format;
-			SwapChainFlags = desc.Flags;
-		}
-	}
-#endif
 
 	const bool was_in_dxgi_runtime = g_in_dxgi_runtime;
 	g_in_dxgi_runtime = true;
@@ -535,37 +489,6 @@ HRESULT STDMETHODCALLTYPE DXGISwapChain::ResizeBuffers1(UINT BufferCount, UINT W
 
 	on_reset(true);
 
-	// Handle update of the swap chain description
-#if RESHADE_ADDON
-	{
-		HWND hwnd = nullptr;
-		GetHwnd(&hwnd);
-		DXGI_SWAP_CHAIN_DESC1 desc = {};
-		GetDesc1(&desc);
-		BOOL fullscreen = FALSE;
-		DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreen_desc = {};
-		GetFullscreenState(&fullscreen, nullptr);
-
-		desc.BufferCount = BufferCount;
-		desc.Width = Width;
-		desc.Height = Height;
-		if (NewFormat != DXGI_FORMAT_UNKNOWN)
-			desc.Format = NewFormat;
-		desc.Flags = SwapChainFlags;
-
-		fullscreen_desc.Windowed = !fullscreen;
-
-		if (modify_swapchain_desc(desc, _sync_interval, &fullscreen_desc, hwnd))
-		{
-			BufferCount = desc.BufferCount;
-			Width = desc.Width;
-			Height = desc.Height;
-			NewFormat = desc.Format;
-			SwapChainFlags = desc.Flags;
-		}
-	}
-#endif
-
 	// Need to extract the original command queue object from the proxies passed in
 	assert(ppPresentQueue != nullptr);
 	temp_mem<IUnknown *> present_queues(BufferCount);
@@ -651,25 +574,7 @@ void DXGISwapChain::on_init(bool resize)
 
 	const unique_direct3d_device_lock lock(_direct3d_device, _direct3d_version, _direct3d_version == 12 ? static_cast<D3D12CommandQueue *>(_direct3d_command_queue)->_mutex : _impl_mutex);
 
-#if RESHADE_ADDON
-	reshade::invoke_addon_event<reshade::addon_event::init_swapchain>(_impl, resize);
-
-	BOOL fullscreen = FALSE;
-	com_ptr<IDXGIOutput> output;
-	GetFullscreenState(&fullscreen, &output);
-
-	HMONITOR hmonitor = nullptr;
-	if (output != nullptr)
-	{
-		DXGI_OUTPUT_DESC output_desc = {};
-		output->GetDesc(&output_desc);
-		hmonitor = output_desc.Monitor;
-	}
-
-	reshade::invoke_addon_event<reshade::addon_event::set_fullscreen_state>(_impl, fullscreen != FALSE, hmonitor);
-#else
 	UNREFERENCED_PARAMETER(resize);
-#endif
 
 	reshade::init_effect_runtime(_impl);
 
@@ -684,11 +589,7 @@ void DXGISwapChain::on_reset(bool resize)
 
 	reshade::reset_effect_runtime(_impl);
 
-#if RESHADE_ADDON
-	reshade::invoke_addon_event<reshade::addon_event::destroy_swapchain>(_impl, resize);
-#else
 	UNREFERENCED_PARAMETER(resize);
-#endif
 
 	_is_initialized = false;
 }
@@ -715,31 +616,9 @@ void DXGISwapChain::on_present(UINT flags, [[maybe_unused]] const DXGI_PRESENT_P
 	switch (_direct3d_version)
 	{
 	case 11:
-#if RESHADE_ADDON
-		reshade::invoke_addon_event<reshade::addon_event::execute_command_list>(
-			static_cast<D3D11Device *>(static_cast<ID3D11Device *>(_direct3d_device))->_immediate_context,
-			static_cast<D3D11Device *>(static_cast<ID3D11Device *>(_direct3d_device))->_immediate_context);
-
-		reshade::invoke_addon_event<reshade::addon_event::present>(
-			static_cast<D3D11Device *>(static_cast<ID3D11Device *>(_direct3d_device))->_immediate_context,
-			_impl,
-			nullptr,
-			nullptr,
-			params != nullptr ? params->DirtyRectsCount : 0,
-			params != nullptr ? reinterpret_cast<const reshade::api::rect *>(params->pDirtyRects) : nullptr);
-#endif
 		reshade::present_effect_runtime(_impl, static_cast<D3D11Device *>(static_cast<ID3D11Device *>(_direct3d_device))->_immediate_context);
 		break;
 	case 12:
-#if RESHADE_ADDON
-		reshade::invoke_addon_event<reshade::addon_event::present>(
-			static_cast<D3D12CommandQueue *>(_direct3d_command_queue),
-			_impl,
-			nullptr,
-			nullptr,
-			params != nullptr ? params->DirtyRectsCount : 0,
-			params != nullptr ? reinterpret_cast<const reshade::api::rect *>(params->pDirtyRects) : nullptr);
-#endif
 		reshade::present_effect_runtime(_impl, static_cast<D3D12CommandQueue *>(_direct3d_command_queue));
 		static_cast<D3D12CommandQueue *>(_direct3d_command_queue)->flush_immediate_command_list();
 		break;
@@ -759,9 +638,6 @@ void DXGISwapChain::handle_device_loss(HRESULT hr)
 			HRESULT reason = DXGI_ERROR_INVALID_CALL;
 			switch (_direct3d_version)
 			{
-			case 10:
-				reason = static_cast<ID3D10Device *>(_direct3d_device)->GetDeviceRemovedReason();
-				break;
 			case 11:
 				reason = static_cast<ID3D11Device *>(_direct3d_device)->GetDeviceRemovedReason();
 				break;

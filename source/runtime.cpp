@@ -8,7 +8,6 @@
 #include "dll_log.hpp"
 #include "dll_resources.hpp"
 #include "ini_file.hpp"
-#include "addon_manager.hpp"
 #include "input.hpp"
 #include "input_gamepad.hpp"
 #include "com_ptr.hpp"
@@ -408,10 +407,6 @@ bool reshade::runtime::on_init()
 	_is_initialized = true;
 	_last_reload_time = std::chrono::high_resolution_clock::now(); // Intentionally set to current time, so that duration to last reload is valid even when there is no reload on init
 
-#if RESHADE_ADDON
-	invoke_addon_event<addon_event::init_effect_runtime>(this);
-#endif
-
 	return true;
 
 exit_failure:
@@ -487,10 +482,6 @@ void reshade::runtime::on_reset()
 
 #if RESHADE_GUI
 	destroy_imgui_resources();
-#endif
-
-#if RESHADE_ADDON
-	invoke_addon_event<addon_event::destroy_effect_runtime>(this);
 #endif
 }
 void reshade::runtime::on_present(api::command_queue *present_queue)
@@ -617,41 +608,6 @@ void reshade::runtime::on_present(api::command_queue *present_queue)
 		_input->next_frame();
 	if (_input_gamepad != nullptr)
 		_input_gamepad->next_frame();
-
-#if RESHADE_ADDON == 1
-	// Detect high network traffic
-	extern volatile long g_network_traffic;
-
-	static int cooldown = 0, traffic = 0;
-	if (cooldown-- > 0)
-	{
-		traffic += g_network_traffic > 0;
-	}
-	else
-	{
-		const bool was_enabled = addon_enabled;
-		addon_enabled = traffic < 10;
-		traffic = 0;
-		cooldown = 60;
-
-		if (addon_enabled != was_enabled)
-		{
-			if (was_enabled)
-				_backup_texture_semantic_bindings = _texture_semantic_bindings;
-
-			for (const auto &info : _backup_texture_semantic_bindings)
-			{
-				if (info.second.first == _effect_permutations[0].color_srv[0] && info.second.second == _effect_permutations[0].color_srv[1])
-					continue;
-
-				update_texture_bindings(info.first.c_str(), addon_enabled ? info.second.first : api::resource_view { 0 }, addon_enabled ? info.second.second : api::resource_view { 0 });
-			}
-		}
-	}
-
-	if (std::numeric_limits<long>::max() != g_network_traffic)
-		g_network_traffic = 0;
-#endif
 }
 
 static std::string expand_macro_string(const std::string &input, std::vector<std::pair<std::string, std::string>> macros, std::chrono::system_clock::time_point now)

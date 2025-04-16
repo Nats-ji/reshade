@@ -8,7 +8,6 @@
 #include "d3d12_command_queue.hpp"
 #include "d3d12_command_queue_downlevel.hpp"
 #include "dll_log.hpp"
-#include "addon_manager.hpp"
 
 D3D12CommandQueue::D3D12CommandQueue(D3D12Device *device, ID3D12CommandQueue *original) :
 	command_queue_impl(device, original),
@@ -17,17 +16,9 @@ D3D12CommandQueue::D3D12CommandQueue(D3D12Device *device, ID3D12CommandQueue *or
 	assert(_orig != nullptr && _device != nullptr);
 	// Explicitly add a reference to the device, to ensure it stays valid for the lifetime of this queue object
 	_device->AddRef();
-
-#if RESHADE_ADDON
-	reshade::invoke_addon_event<reshade::addon_event::init_command_queue>(this);
-#endif
 }
 D3D12CommandQueue::~D3D12CommandQueue()
 {
-#if RESHADE_ADDON
-	reshade::invoke_addon_event<reshade::addon_event::destroy_command_queue>(this);
-#endif
-
 	// Release the device reference below at the end of 'D3D12CommandQueue::Release' rather than here, since the '~command_queue_impl' destructor still has to run with the device alive
 }
 
@@ -176,10 +167,6 @@ void    STDMETHODCALLTYPE D3D12CommandQueue::ExecuteCommandLists(UINT NumCommand
 		if (com_ptr<D3D12GraphicsCommandList> command_list_proxy;
 			SUCCEEDED(ppCommandLists[i]->QueryInterface(&command_list_proxy)))
 		{
-#if RESHADE_ADDON
-			reshade::invoke_addon_event<reshade::addon_event::execute_command_list>(this, command_list_proxy.get());
-#endif
-
 			// Get original command list pointer from proxy object
 			command_lists[i] = command_list_proxy->_orig;
 		}

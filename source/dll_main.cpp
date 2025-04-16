@@ -7,7 +7,6 @@
 #include "dll_log.hpp"
 #include "ini_file.hpp"
 #include "hook_manager.hpp"
-#include "addon_manager.hpp"
 #include <Windows.h>
 #include <Psapi.h>
 #ifndef NDEBUG
@@ -291,20 +290,6 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID)
 					reshade::hooks::register_module(get_system_path() / L"dinput8.dll");
 				}
 
-#if RESHADE_ADDON == 1
-				if (!GetEnvironmentVariableW(L"RESHADE_DISABLE_NETWORK_HOOK", nullptr, 0))
-				{
-					reshade::hooks::register_module(L"ws2_32.dll");
-				}
-				else
-				{
-					// Disable network hooks when requested through an environment variable and always disable add-ons in that case
-					extern volatile long g_network_traffic;
-					g_network_traffic = std::numeric_limits<long>::max(); // Special value to indicate that add-ons should never be enabled
-					reshade::addon_enabled = false;
-				}
-#endif
-
 				if (!GetEnvironmentVariableW(L"RESHADE_DISABLE_GRAPHICS_HOOK", nullptr, 0))
 				{
 					// Only register D3D hooks when module is not called opengl32.dll
@@ -349,11 +334,6 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID)
 		case DLL_PROCESS_DETACH:
 		{
 			reshade::log::message(reshade::log::level::info, "Exiting ...");
-
-#if RESHADE_ADDON
-			if (reshade::has_loaded_addons())
-				reshade::log::message(reshade::log::level::warning, "Add-ons are still loaded! Application may crash on exit.");
-#endif
 
 			reshade::hooks::uninstall();
 
